@@ -1,0 +1,164 @@
+{
+  "appName": {
+    "message": "読書記録",
+    "description": "拡張機能の名前"
+  },
+  "appDesc": {
+    "message": "Web記事の読書記録、難易度別読解進捗",
+    "description": "拡張機能の説明"
+  },
+  "popup_title": {
+    "message": "読書記録",
+    "description": "ポップアップのタイトル"
+  },
+  "popup_current_article": {
+    "message": "現在の記事",
+    "description": "ポップアップ: 現在開いている記事のラベル"
+  },
+  "popup_no_article": {
+    "message": "記事が検出されていません",
+    "description": "ポップアップ: 記事未検出時のメッセージ"
+  },
+  "popup_difficulty": {
+    "message": "難易度",
+    "description": "ポップアップ: 難易度ラベル"
+  },
+  "popup_difficulty_easy": {
+    "message": "やさしい",
+    "description": "難易度: 易"
+  },
+  "popup_difficulty_medium": {
+    "message": "ふつう",
+    "description": "難易度: 中"
+  },
+  "popup_difficulty_hard": {
+    "message": "むずかしい",
+    "description": "難易度: 難"
+  },
+  "popup_log_read": {
+    "message": "読了を記録",
+    "description": "ポップアップ: 読了ボタン"
+  },
+  "popup_logged": {
+    "message": "記録しました",
+    "description": "ポップアップ: 記録完了メッセージ"
+  },
+  "popup_today_count": {
+    "message": "今日の読了数",
+    "description": "ポップアップ: 本日の読了数ラベル"
+  },
+  "popup_goal": {
+    "message": "目標",
+    "description": "ポップアップ: 目標ラベル"
+  },
+  "popup_open_options": {
+    "message": "設定を開く",
+    "description": "ポップアップ: 設定リンク"
+  },
+  "popup_view_report": {
+    "message": "月次レポートを見る",
+    "description": "ポップアップ: 月次レポートへのリンク"
+  },
+  "options_title": {
+    "message": "設定",
+    "description": "オプションページのタイトル"
+  },
+  "options_language": {
+    "message": "言語",
+    "description": "オプション: 言語設定"
+  },
+  "options_daily_goal": {
+    "message": "1日の目標記事数",
+    "description": "オプション: 1日の目標"
+  },
+  "options_difficulty_pref": {
+    "message": "目標難易度",
+    "description": "オプション: 目標難易度設定"
+  },
+  "options_theme": {
+    "message": "テーマ",
+    "description": "オプション: テーマ設定"
+  },
+  "options_theme_auto": {
+    "message": "自動",
+    "description": "テーマ: 自動"
+  },
+  "options_theme_light": {
+    "message": "ライト",
+    "description": "テーマ: ライト"
+  },
+  "options_theme_dark": {
+    "message": "ダーク",
+    "description": "テーマ: ダーク"
+  },
+  "options_export": {
+    "message": "データをエクスポート",
+    "description": "オプション: データエクスポートボタン"
+  },
+  "options_import": {
+    "message": "データをインポート",
+    "description": "オプション: データインポートボタン"
+  },
+  "options_reset": {
+    "message": "すべてのデータを削除",
+    "description": "オプション: データリセットボタン"
+  },
+  "options_reset_confirm": {
+    "message": "本当にすべての読書記録を削除しますか？この操作は取り消せません。",
+    "description": "オプション: リセット確認"
+  },
+  "options_saved": {
+    "message": "保存しました",
+    "description": "オプション: 保存完了メッセージ"
+  },
+  "options_premium": {
+    "message": "プレミアム機能",
+    "description": "オプション: プレミアムセクション"
+  },
+  "options_premium_unlock": {
+    "message": "プレミアムを解放 ($3)",
+    "description": "オプション: プレミアム購入ボタン"
+  },
+  "options_trial_remaining": {
+    "message": "無料お試し残り $DAYS$ 日",
+    "description": "オプション: お試し期間残り",
+    "placeholders": {
+      "days": {
+        "content": "$1",
+        "example": "5"
+      }
+    }
+  },
+  "options_premium_active": {
+    "message": "プレミアム機能が有効です",
+    "description": "オプション: プレミアム有効表示"
+  },
+  "report_title": {
+    "message": "月次レポート",
+    "description": "月次レポートのタイトル"
+  },
+  "report_total_articles": {
+    "message": "今月の読了記事数",
+    "description": "レポート: 月間総読了数"
+  },
+  "report_by_difficulty": {
+    "message": "難易度別内訳",
+    "description": "レポート: 難易度別グラフ"
+  },
+  "report_streak": {
+    "message": "連続読書日数",
+    "description": "レポート: 連続日数"
+  },
+  "common_save": {
+    "message": "保存",
+    "description": "汎用: 保存"
+  },
+  "common_cancel": {
+    "message": "キャンセル",
+    "description": "汎用: キャンセル"
+  },
+  "common_close": {
+    "message": "閉じる",
+    "description": "汎用: 閉じる"
+  }
+}
