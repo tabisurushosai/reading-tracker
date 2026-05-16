@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title data-i18n="popup_title">読書記録</title>
+    <link rel="stylesheet" href="./popup.css" />
+  </head>
+  <body>
+    <main class="popup">
+      <header class="popup__header">
+        <h1 class="popup__title" data-i18n="popup_title">読書記録</h1>
+      </header>
+
+      <section class="popup__section" aria-labelledby="current-article-label">
+        <h2 id="current-article-label" class="popup__label" data-i18n="popup_current_article">
+          現在の記事
+        </h2>
+        <p id="current-article-title" class="popup__article-title" data-i18n="popup_no_article">
+          記事が検出されていません
+        </p>
+
+        <div class="popup__difficulty" id="difficulty-row" hidden>
+          <span class="popup__label" data-i18n="popup_difficulty">難易度</span>
+          <span id="difficulty-value" class="popup__difficulty-value"></span>
+        </div>
+
+        <button id="log-read-btn" class="popup__button popup__button--primary" type="button" disabled>
+          <span data-i18n="popup_log_read">読了を記録</span>
+        </button>
+        <p id="logged-message" class="popup__feedback" role="status" hidden data-i18n="popup_logged">
+          記録しました
+        </p>
+      </section>
+
+      <section class="popup__section popup__stats" aria-label="stats">
+        <div class="popup__stat">
+          <span class="popup__label" data-i18n="popup_today_count">今日の読了数</span>
+          <span id="today-count" class="popup__stat-value">0</span>
+        </div>
+        <div class="popup__stat">
+          <span class="popup__label" data-i18n="popup_goal">目標</span>
+          <span id="daily-goal" class="popup__stat-value">-</span>
+        </div>
+      </section>
+
+      <footer class="popup__footer">
+        <button id="open-options-btn" class="popup__link" type="button" data-i18n="popup_open_options">
+          設定を開く
+        </button>
+        <button id="view-report-btn" class="popup__link" type="button" data-i18n="popup_view_report">
+          月次レポートを見る
+        </button>
+      </footer>
+    </main>
+
+    <script type="module" src="./popup.ts"></script>
+  </body>
+</html>
