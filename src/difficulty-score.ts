@@ -153,23 +153,56 @@ export const EN_WEIGHT_SENTENCE = 0.45;
 // Pure helpers — T020 implements, T021 tests
 // ---------------------------------------------------------------------------
 
+const HIRAGANA_RE = /[぀-ゟ]/;
+const KATAKANA_RE = /[゠-ヿ]/;
+const KANJI_RE = /[一-鿿]/;
+const ASCII_LETTER_RE = /[A-Za-z]/;
+const LANG_DETECT_MIN_SHARE = 0.2;
+
+function clamp01(v: number): number {
+  if (v < 0) return 0;
+  if (v > 1) return 1;
+  return v;
+}
+
+function normalizeWhitespace(text: string): string {
+  return text.replace(/\s+/g, " ").trim();
+}
+
 /**
  * Detect the dominant script. Returns "unknown" when neither Japanese-script
  * nor ASCII-letter characters reach a usable share of the sample.
- *
- * Counts:
- *   - Japanese: U+3040–309F (hiragana) + U+30A0–30FF (katakana) +
- *               U+4E00–9FFF (CJK unified ideographs).
- *   - English: ASCII letters A–Z, a–z. Digits and punctuation excluded so
- *              code listings or tables of numbers don't flip detection.
  */
 export function detectLanguage(text: string): Language {
-  throw new Error("difficulty-score.detectLanguage: not implemented (T020)");
+  if (!text) return "unknown";
+  let ja = 0;
+  let en = 0;
+  let total = 0;
+  for (const ch of text) {
+    if (HIRAGANA_RE.test(ch) || KATAKANA_RE.test(ch) || KANJI_RE.test(ch)) {
+      ja += 1;
+      total += 1;
+    } else if (ASCII_LETTER_RE.test(ch)) {
+      en += 1;
+      total += 1;
+    }
+  }
+  if (total === 0) return "unknown";
+  const jaShare = ja / total;
+  const enShare = en / total;
+  if (jaShare >= enShare && jaShare >= LANG_DETECT_MIN_SHARE) return "ja";
+  if (enShare > jaShare && enShare >= LANG_DETECT_MIN_SHARE) return "en";
+  return "unknown";
 }
 
 /** Count CJK unified ideograph (kanji) characters in `text`. */
 export function countKanji(text: string): number {
-  throw new Error("difficulty-score.countKanji: not implemented (T020)");
+  if (!text) return 0;
+  let n = 0;
+  for (const ch of text) {
+    if (KANJI_RE.test(ch)) n += 1;
+  }
+  return n;
 }
 
 /**
@@ -177,7 +210,13 @@ export function countKanji(text: string): number {
  * surrounding punctuation. Numbers and contractions are kept (don't, 3rd).
  */
 export function splitEnglishWords(text: string): string[] {
-  throw new Error("difficulty-score.splitEnglishWords: not implemented (T020)");
+  if (!text) return [];
+  const out: string[] = [];
+  for (const raw of text.split(/\s+/)) {
+    const w = raw.replace(/^[^A-Za-z0-9']+|[^A-Za-z0-9']+$/g, "");
+    if (w.length > 0) out.push(w);
+  }
+  return out;
 }
 
 /**
@@ -186,12 +225,94 @@ export function splitEnglishWords(text: string): string[] {
  * is present so avgSentenceLength stays defined.
  */
 export function splitSentences(text: string): string[] {
-  throw new Error("difficulty-score.splitSentences: not implemented (T020)");
+  const trimmed = text ? text.trim() : "";
+  if (!trimmed) return [];
+  const parts = trimmed.split(/(?<=[.!?。！？])\s*/);
+  const out: string[] = [];
+  for (const p of parts) {
+    const s = p.trim();
+    if (s.length > 0) out.push(s);
+  }
+  if (out.length === 0) return [trimmed];
+  return out;
 }
 
 /** Map a [0, 1] score into the three-bucket scale using EASY_MAX / MEDIUM_MAX. */
 export function scoreToDifficulty(score: number): Difficulty {
-  throw new Error("difficulty-score.scoreToDifficulty: not implemented (T020)");
+  if (score < EASY_MAX) return "easy";
+  if (score < MEDIUM_MAX) return "medium";
+  return "hard";
+}
+
+function emptyMetrics(): TextMetrics {
+  return {
+    charCount: 0,
+    sentenceCount: 0,
+    avgSentenceLength: 0,
+    avgWordLength: 0,
+    kanjiRatio: 0,
+  };
+}
+
+function scoreJapanese(text: string): DifficultyScore {
+  const sentences = splitSentences(text);
+  const kanji = countKanji(text);
+  const charCount = text.length;
+  const kanjiRatio = charCount > 0 ? kanji / charCount : 0;
+  const avgSentenceLength =
+    sentences.length > 0 ? charCount / sentences.length : charCount;
+
+  const kanjiComplexity = clamp01(kanjiRatio / JA_KANJI_RATIO_FULL);
+  const sentenceComplexity = clamp01(avgSentenceLength / JA_AVG_SENTENCE_FULL);
+  const score = clamp01(
+    kanjiComplexity * JA_WEIGHT_KANJI + sentenceComplexity * JA_WEIGHT_SENTENCE
+  );
+
+  return {
+    difficulty: scoreToDifficulty(score),
+    score,
+    language: "ja",
+    metrics: {
+      charCount,
+      sentenceCount: sentences.length,
+      avgSentenceLength,
+      avgWordLength: 0,
+      kanjiRatio,
+    },
+    reason: "ok",
+  };
+}
+
+function scoreEnglish(text: string): DifficultyScore {
+  const sentences = splitSentences(text);
+  const words = splitEnglishWords(text);
+  const charCount = text.length;
+  const totalWordChars = words.reduce((sum, w) => sum + w.length, 0);
+  const avgWordLength = words.length > 0 ? totalWordChars / words.length : 0;
+  const avgSentenceLength =
+    sentences.length > 0 ? words.length / sentences.length : words.length;
+
+  const wordComplexity = clamp01(avgWordLength / EN_AVG_WORD_FULL);
+  const sentenceComplexity = clamp01(
+    avgSentenceLength / EN_AVG_SENTENCE_WORDS_FULL
+  );
+  const score = clamp01(
+    wordComplexity * EN_WEIGHT_WORD + sentenceComplexity * EN_WEIGHT_SENTENCE
+  );
+
+  return {
+    difficulty: scoreToDifficulty(score),
+    score,
+    language: "en",
+    metrics: {
+      charCount,
+      sentenceCount: sentences.length,
+      avgSentenceLength,
+      avgWordLength,
+      kanjiRatio: 0,
+    },
+    reason: "ok",
+  };
 }
 
 /**
@@ -199,7 +320,48 @@ export function scoreToDifficulty(score: number): Difficulty {
  * input is empty, too short, or language is undetectable. Never throws.
  */
 export function scoreText(text: string | undefined): DifficultyScore {
-  throw new Error("difficulty-score.scoreText: not implemented (T020)");
+  if (text === undefined || text === null) {
+    return {
+      difficulty: "unknown",
+      score: null,
+      language: "unknown",
+      metrics: emptyMetrics(),
+      reason: "empty",
+    };
+  }
+  const normalized = normalizeWhitespace(text);
+  if (normalized.length === 0) {
+    return {
+      difficulty: "unknown",
+      score: null,
+      language: "unknown",
+      metrics: emptyMetrics(),
+      reason: "empty",
+    };
+  }
+  if (normalized.length < MIN_TEXT_FOR_SCORING) {
+    return {
+      difficulty: "unknown",
+      score: null,
+      language: detectLanguage(normalized),
+      metrics: { ...emptyMetrics(), charCount: normalized.length },
+      reason: "too-short",
+    };
+  }
+  const language = detectLanguage(normalized);
+  try {
+    if (language === "ja") return scoreJapanese(normalized);
+    if (language === "en") return scoreEnglish(normalized);
+  } catch {
+    // pure-function contract: never throw. Fall through to unknown.
+  }
+  return {
+    difficulty: "unknown",
+    score: null,
+    language: "unknown",
+    metrics: { ...emptyMetrics(), charCount: normalized.length },
+    reason: "ok",
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -210,12 +372,7 @@ export function scoreText(text: string | undefined): DifficultyScore {
  * Score an ArticleCandidate's optional .text. Lives here (not in
  * article-detect) so the scoring rules stay co-located with the metric
  * constants; article-detect remains responsible only for sampling.
- *
- * When candidate.text is undefined (the user clicked "log" without granting
- * activeTab body extraction, or extraction returned null), the result is
- * { difficulty: "unknown", reason: "empty" } — callers should persist the
- * entry without a difficulty field rather than fabricate one.
  */
 export function scoreArticle(candidate: { text?: string }): DifficultyScore {
-  throw new Error("difficulty-score.scoreArticle: not implemented (T020)");
+  return scoreText(candidate?.text);
 }
