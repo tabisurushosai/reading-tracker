@@ -13,6 +13,7 @@
  */
 
 import { applyI18n, getLocale, t } from "./i18n.js";
+import { detectActiveArticle, type ArticleCandidate } from "./article-detect.js";
 
 interface Settings {
   schemaVersion: number;
@@ -52,12 +53,6 @@ function $<T extends HTMLElement>(id: string): T {
   return el as T;
 }
 
-async function getActiveTab(): Promise<chrome.tabs.Tab | undefined> {
-  if (!chrome.tabs?.query) return undefined;
-  const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-  return tabs[0];
-}
-
 async function loadSettings(): Promise<Settings> {
   const { settings } = await chrome.storage.local.get("settings");
   if (settings && typeof settings === "object") {
@@ -87,25 +82,19 @@ async function appendTodayLog(entry: DailyLogEntry): Promise<DailyLog> {
   return next;
 }
 
-function isHttpArticle(url: string | undefined): boolean {
-  if (!url) return false;
-  return /^https?:\/\//i.test(url);
-}
-
-function renderArticle(tab: chrome.tabs.Tab | undefined): { url: string; title: string } | null {
+function renderArticle(article: ArticleCandidate | null): ArticleCandidate | null {
   const titleEl = $<HTMLParagraphElement>("current-article-title");
   const logBtn = $<HTMLButtonElement>("log-read-btn");
 
-  if (!tab || !isHttpArticle(tab.url)) {
+  if (!article) {
     titleEl.textContent = t("popup_no_article");
     logBtn.disabled = true;
     return null;
   }
 
-  const title = tab.title?.trim() || tab.url || "";
-  titleEl.textContent = title;
+  titleEl.textContent = article.title;
   logBtn.disabled = false;
-  return { url: tab.url!, title };
+  return article;
 }
 
 function renderStats(log: DailyLog, settings: Settings): void {
@@ -125,21 +114,25 @@ async function init(): Promise<void> {
   document.documentElement.lang = getLocale().split("-")[0] || "en";
   applyI18n(document);
 
-  const [settings, log, tab] = await Promise.all([
+  const [settings, log, detection] = await Promise.all([
     loadSettings(),
     loadTodayLog(),
-    getActiveTab(),
+    detectActiveArticle(),
   ]);
 
   renderStats(log, settings);
-  let article = renderArticle(tab);
+  let article = renderArticle(detection.kind === "article" ? detection.article : null);
 
   $<HTMLButtonElement>("log-read-btn").addEventListener("click", async () => {
     if (!article) return;
     const btn = $<HTMLButtonElement>("log-read-btn");
     btn.disabled = true;
     try {
-      const updated = await appendTodayLog({ ...article, ts: Date.now() });
+      const updated = await appendTodayLog({
+        url: article.url,
+        title: article.title,
+        ts: Date.now(),
+      });
       renderStats(updated, settings);
       flashLogged();
       article = null;
