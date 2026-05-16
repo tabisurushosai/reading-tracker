@@ -106,10 +106,16 @@
  */
 
 import {
+  formatDateKey,
+  loadDailyLog as storageLoadDailyLog,
   type DailyLog,
   type Settings,
 } from "./storage.js";
 import {
+  groupByDifficulty,
+  loadRange as readLogLoadRange,
+  streakDays,
+  summarizeLog,
   type DifficultyBreakdown,
 } from "./read-log.js";
 
@@ -256,10 +262,23 @@ export const GOAL_MET_NOTIFICATION_KEY_PREFIX = "goal_met_notified_";
  * 1 (same fallback as summarizeLog) so a bad settings record never yields a
  * NaN/Infinity percent that the popup CSS would render as a broken bar.
  */
-export declare function computeGoalProgress(
+export function computeGoalProgress(
   log: DailyLog,
   settings: Settings,
-): GoalProgress;
+): GoalProgress {
+  const goal = settings && settings.dailyGoal > 0 ? settings.dailyGoal : 1;
+  const pref = settings?.difficultyPref ?? "any";
+  const summary = summarizeLog(log, goal, pref);
+  const raw = goal > 0 ? summary.count / goal : 0;
+  const percent = Number.isFinite(raw) ? Math.min(1, Math.max(0, raw)) : 0;
+  return {
+    count: summary.count,
+    goal,
+    percent,
+    met: summary.goalMet,
+    byDifficulty: summary.byDifficulty,
+  };
+}
 
 /**
  * Build the rolling 7-day window ending on `today`. Days absent from
@@ -267,11 +286,44 @@ export declare function computeGoalProgress(
  * length-WEEK_WINDOW_DAYS array. Counts respect settings.difficultyPref so
  * the weekly view is internally consistent with today's progress bar.
  */
-export declare function computeWeeklyProgress(
+export function computeWeeklyProgress(
   logsByDate: ReadonlyMap<string, DailyLog>,
   settings: Settings,
   today: Date,
-): WeeklyProgress;
+): WeeklyProgress {
+  const goal = settings && settings.dailyGoal > 0 ? settings.dailyGoal : 1;
+  const pref = settings?.difficultyPref ?? "any";
+  const safeToday =
+    today instanceof Date && !Number.isNaN(today.getTime())
+      ? new Date(today.getFullYear(), today.getMonth(), today.getDate())
+      : new Date();
+  const perDay: DailyProgressSlot[] = [];
+  let daysMet = 0;
+  for (let i = WEEK_WINDOW_DAYS - 1; i >= 0; i -= 1) {
+    const cursor = new Date(safeToday);
+    cursor.setDate(safeToday.getDate() - i);
+    const key = formatDateKey(cursor);
+    const log = logsByDate?.get?.(key);
+    let count = 0;
+    if (log) {
+      if (pref === "any") {
+        count = log.count ?? 0;
+      } else {
+        count = groupByDifficulty(log)[pref];
+      }
+    }
+    const met = count >= goal;
+    if (met) daysMet += 1;
+    perDay.push({ date: key, count, met });
+  }
+  return {
+    startDate: perDay[0]?.date ?? formatDateKey(safeToday),
+    endDate: perDay[perDay.length - 1]?.date ?? formatDateKey(safeToday),
+    daysMet,
+    totalDays: WEEK_WINDOW_DAYS,
+    perDay,
+  };
+}
 
 /**
  * Compute current + longest streak from a logsByDate map. `current` defers to
@@ -283,23 +335,80 @@ export declare function computeWeeklyProgress(
  * is to reward consistency of *any* reading; gating it by difficulty would
  * disincentivize easy reads on tired days and defeats the encouragement loop.
  */
-export declare function computeStreak(
+export function computeStreak(
   logsByDate: ReadonlyMap<string, DailyLog>,
   today: Date,
-): StreakState;
+): StreakState {
+  const safeToday =
+    today instanceof Date && !Number.isNaN(today.getTime()) ? today : new Date();
+  const current = streakDays(logsByDate ?? new Map(), safeToday);
+  let longest = 0;
+  if (logsByDate && typeof logsByDate.entries === "function") {
+    const days: string[] = [];
+    for (const [key, log] of logsByDate) {
+      if (log && (log.count ?? 0) >= 1) days.push(key);
+    }
+    days.sort();
+    let run = 0;
+    let prev: Date | null = null;
+    for (const key of days) {
+      const parts = key.split("-");
+      if (parts.length !== 3) {
+        run = 0;
+        prev = null;
+        continue;
+      }
+      const y = Number(parts[0]);
+      const m = Number(parts[1]);
+      const d = Number(parts[2]);
+      if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) {
+        run = 0;
+        prev = null;
+        continue;
+      }
+      const cur = new Date(y, m - 1, d);
+      if (prev) {
+        const diff = Math.round(
+          (cur.getTime() - prev.getTime()) / (24 * 60 * 60 * 1000),
+        );
+        if (diff === 1) {
+          run += 1;
+        } else {
+          run = 1;
+        }
+      } else {
+        run = 1;
+      }
+      if (run > longest) longest = run;
+      prev = cur;
+    }
+  }
+  if (current > longest) longest = current;
+  const todayKey = formatDateKey(safeToday);
+  const todayLog = logsByDate?.get?.(todayKey);
+  const todayMet = !!todayLog && (todayLog.count ?? 0) >= 1;
+  return { current, longest, todayMet };
+}
 
 /**
  * Compose computeGoalProgress + computeWeeklyProgress + computeStreak into a
  * single GoalState. Pure; T026 implements as a thin wrapper so the popup can
  * call one function and get every view it renders.
  */
-export declare function evaluateGoalState(
+export function evaluateGoalState(
   todayLog: DailyLog,
   logsByDate: ReadonlyMap<string, DailyLog>,
   settings: Settings,
   today: Date,
   now: number,
-): GoalState;
+): GoalState {
+  return {
+    today: computeGoalProgress(todayLog, settings),
+    week: computeWeeklyProgress(logsByDate, settings, today),
+    streak: computeStreak(logsByDate, today),
+    evaluatedAt: typeof now === "number" && Number.isFinite(now) ? now : Date.now(),
+  };
+}
 
 // ---------------------------------------------------------------------------
 // Async seams — T026 wires to chrome.storage / read-log; T027 fakes via ports
@@ -313,7 +422,74 @@ export declare function evaluateGoalState(
  * inputs — the popup still renders a sensible "0 / goal" view rather than
  * an error state.
  */
-export declare function loadGoalState(ports?: GoalTrackerPorts): Promise<GoalState>;
+export async function loadGoalState(ports?: GoalTrackerPorts): Promise<GoalState> {
+  const nowFn = ports?.now ?? Date.now;
+  const nowMs = (() => {
+    try {
+      const v = nowFn();
+      return typeof v === "number" && Number.isFinite(v) ? v : Date.now();
+    } catch {
+      return Date.now();
+    }
+  })();
+  const today = new Date(nowMs);
+  const startOfToday = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate(),
+  );
+  const windowStart = new Date(startOfToday);
+  windowStart.setDate(startOfToday.getDate() - (WEEK_WINDOW_DAYS - 1));
+
+  let settings: Settings;
+  try {
+    const { settings: raw } = await chrome.storage.local.get("settings");
+    if (raw && typeof raw === "object") {
+      const r = raw as Partial<Settings>;
+      settings = {
+        schemaVersion: 1,
+        dailyGoal: typeof r.dailyGoal === "number" && r.dailyGoal > 0 ? r.dailyGoal : 1,
+        difficultyPref:
+          r.difficultyPref === "easy" ||
+          r.difficultyPref === "medium" ||
+          r.difficultyPref === "hard" ||
+          r.difficultyPref === "any"
+            ? r.difficultyPref
+            : "any",
+        theme:
+          r.theme === "light" || r.theme === "dark" || r.theme === "auto"
+            ? r.theme
+            : "auto",
+      };
+    } else {
+      settings = { schemaVersion: 1, dailyGoal: 1, difficultyPref: "any", theme: "auto" };
+    }
+  } catch {
+    settings = { schemaVersion: 1, dailyGoal: 1, difficultyPref: "any", theme: "auto" };
+  }
+
+  const loadDay = ports?.loadDailyLog ?? storageLoadDailyLog;
+  let todayLog: DailyLog;
+  try {
+    todayLog = await loadDay(today);
+  } catch {
+    todayLog = { count: 0, entries: [] };
+  }
+  if (!todayLog || typeof todayLog !== "object") {
+    todayLog = { count: 0, entries: [] };
+  }
+
+  const loadRangeFn = ports?.loadRange ?? readLogLoadRange;
+  let logsByDate: Map<string, DailyLog>;
+  try {
+    logsByDate = await loadRangeFn(windowStart, today);
+  } catch {
+    logsByDate = new Map();
+  }
+  if (!logsByDate) logsByDate = new Map();
+
+  return evaluateGoalState(todayLog, logsByDate, settings, today, nowMs);
+}
 
 /**
  * Read the per-day notification flag for `today`. Returns true when today's
@@ -322,10 +498,27 @@ export declare function loadGoalState(ports?: GoalTrackerPorts): Promise<GoalSta
  * calling markGoalMetNotificationFired() — the gate doesn't fire on its own
  * because the SPEC-mandated minimum permissions stay in the caller's hands.
  */
-export declare function shouldFireGoalMetNotification(
+export async function shouldFireGoalMetNotification(
   state: GoalState,
   ports?: GoalTrackerPorts,
-): Promise<boolean>;
+): Promise<boolean> {
+  if (!state?.today?.met) return false;
+  const nowFn = ports?.now ?? Date.now;
+  let ts: number;
+  try {
+    const v = nowFn();
+    ts = typeof v === "number" && Number.isFinite(v) ? v : Date.now();
+  } catch {
+    ts = Date.now();
+  }
+  const key = `${GOAL_MET_NOTIFICATION_KEY_PREFIX}${formatDateKey(new Date(ts))}`;
+  try {
+    const stored = await chrome.storage.local.get(key);
+    return stored[key] !== true;
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Persist the "we already notified for today" flag. Idempotent; called by the
@@ -333,6 +526,15 @@ export declare function shouldFireGoalMetNotification(
  * Silent on write failure — the worst case is a duplicate notification next
  * time, which is preferable to a thrown exception.
  */
-export declare function markGoalMetNotificationFired(
+export async function markGoalMetNotificationFired(
   today: Date,
-): Promise<void>;
+): Promise<void> {
+  const safe =
+    today instanceof Date && !Number.isNaN(today.getTime()) ? today : new Date();
+  const key = `${GOAL_MET_NOTIFICATION_KEY_PREFIX}${formatDateKey(safe)}`;
+  try {
+    await chrome.storage.local.set({ [key]: true });
+  } catch {
+    // Silent — duplicate notification next call is preferable to throwing.
+  }
+}
