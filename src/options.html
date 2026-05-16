@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title data-i18n="options_title">設定</title>
+    <link rel="stylesheet" href="./options.css" />
+  </head>
+  <body>
+    <main class="options">
+      <header class="options__header">
+        <h1 class="options__title" data-i18n="options_title">設定</h1>
+      </header>
+
+      <form id="settings-form" class="options__form" novalidate>
+        <section class="options__section">
+          <div class="options__field">
+            <label class="options__label" for="daily-goal" data-i18n="options_daily_goal">
+              1日の目標記事数
+            </label>
+            <input
+              type="number"
+              id="daily-goal"
+              name="dailyGoal"
+              class="options__input"
+              min="1"
+              max="100"
+              step="1"
+              required
+            />
+          </div>
+
+          <div class="options__field">
+            <label class="options__label" for="difficulty-pref" data-i18n="options_difficulty_pref">
+              目標難易度
+            </label>
+            <select id="difficulty-pref" name="difficultyPref" class="options__input">
+              <option value="any">—</option>
+              <option value="easy" data-i18n="popup_difficulty_easy">やさしい</option>
+              <option value="medium" data-i18n="popup_difficulty_medium">ふつう</option>
+              <option value="hard" data-i18n="popup_difficulty_hard">むずかしい</option>
+            </select>
+          </div>
+
+          <div class="options__field">
+            <label class="options__label" for="theme" data-i18n="options_theme">テーマ</label>
+            <select id="theme" name="theme" class="options__input">
+              <option value="auto" data-i18n="options_theme_auto">自動</option>
+              <option value="light" data-i18n="options_theme_light">ライト</option>
+              <option value="dark" data-i18n="options_theme_dark">ダーク</option>
+            </select>
+          </div>
+
+          <div class="options__actions">
+            <button
+              type="submit"
+              class="options__button options__button--primary"
+              data-i18n="common_save"
+            >
+              保存
+            </button>
+            <span
+              id="saved-message"
+              class="options__feedback"
+              role="status"
+              hidden
+              data-i18n="options_saved"
+            >
+              保存しました
+            </span>
+          </div>
+        </section>
+      </form>
+
+      <section class="options__section" aria-labelledby="premium-heading">
+        <h2 id="premium-heading" class="options__subtitle" data-i18n="options_premium">
+          プレミアム機能
+        </h2>
+        <p id="premium-status" class="options__premium-status" role="status"></p>
+        <button
+          id="premium-unlock-btn"
+          type="button"
+          class="options__button options__button--accent"
+          hidden
+          data-i18n="options_premium_unlock"
+        >
+          プレミアムを解放 ($3)
+        </button>
+      </section>
+
+      <section class="options__section" aria-labelledby="data-heading">
+        <h2 id="data-heading" class="options__subtitle">Data</h2>
+        <div class="options__actions options__actions--stack">
+          <button
+            id="export-btn"
+            type="button"
+            class="options__button"
+            data-i18n="options_export"
+          >
+            データをエクスポート
+          </button>
+          <button
+            id="import-btn"
+            type="button"
+            class="options__button"
+            data-i18n="options_import"
+          >
+            データをインポート
+          </button>
+          <input
+            id="import-file"
+            type="file"
+            accept="application/json"
+            hidden
+          />
+          <button
+            id="reset-btn"
+            type="button"
+            class="options__button options__button--danger"
+            data-i18n="options_reset"
+          >
+            すべてのデータを削除
+          </button>
+        </div>
+      </section>
+    </main>
+
+    <script type="module" src="./options.ts"></script>
+  </body>
+</html>

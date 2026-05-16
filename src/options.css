@@ -1,0 +1,217 @@
+:root {
+  --bg: #ffffff;
+  --bg-elevated: #f7f7f8;
+  --fg: #1a1a1a;
+  --fg-muted: #5a5a5a;
+  --border: #e2e2e5;
+  --accent: #d97a2c;
+  --accent-fg: #ffffff;
+  --accent-hover: #b6661f;
+  --focus-ring: #2a7adb;
+  --success: #2e7d4f;
+  --danger: #c0392b;
+  --danger-hover: #a23121;
+  --disabled-bg: #e6e6e8;
+  --disabled-fg: #9a9a9e;
+  --radius: 8px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Kaku Gothic ProN",
+    "Noto Sans JP", Meiryo, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1a1b1e;
+    --bg-elevated: #25272b;
+    --fg: #f1f1f2;
+    --fg-muted: #a8a9ad;
+    --border: #3a3c41;
+    --accent: #f08a3c;
+    --accent-fg: #1a1b1e;
+    --accent-hover: #ffa15a;
+    --focus-ring: #66a6ff;
+    --success: #6ddc94;
+    --danger: #e87060;
+    --danger-hover: #ff8a78;
+    --disabled-bg: #2d2f33;
+    --disabled-fg: #6a6b6f;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+body {
+  min-height: 100vh;
+}
+
+.options {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 32px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.options__header {
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 12px;
+}
+
+.options__title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.options__subtitle {
+  margin: 0 0 8px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.options__section {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.options__form {
+  display: contents;
+}
+
+.options__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.options__label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--fg-muted);
+}
+
+.options__input {
+  appearance: none;
+  background: var(--bg);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+  font-family: inherit;
+  font-size: 14px;
+  min-height: 36px;
+}
+
+.options__input:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  border-color: var(--focus-ring);
+}
+
+.options__actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.options__actions--stack {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.options__button {
+  appearance: none;
+  background: var(--bg);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 8px 14px;
+  cursor: pointer;
+  transition: background-color 120ms ease, color 120ms ease, border-color 120ms ease;
+  min-height: 36px;
+}
+
+.options__button:hover:not(:disabled) {
+  border-color: var(--fg-muted);
+}
+
+.options__button:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.options__button:disabled {
+  background: var(--disabled-bg);
+  color: var(--disabled-fg);
+  cursor: not-allowed;
+}
+
+.options__button--primary,
+.options__button--accent {
+  background: var(--accent);
+  color: var(--accent-fg);
+  border-color: var(--accent);
+}
+
+.options__button--primary:hover:not(:disabled),
+.options__button--accent:hover:not(:disabled) {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+
+.options__button--danger {
+  background: transparent;
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+.options__button--danger:hover:not(:disabled) {
+  background: var(--danger);
+  color: var(--accent-fg);
+  border-color: var(--danger-hover);
+}
+
+.options__feedback {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--success);
+}
+
+.options__feedback[hidden] {
+  display: none;
+}
+
+.options__premium-status {
+  margin: 0;
+  font-size: 14px;
+  color: var(--fg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .options__button {
+    transition: none;
+  }
+}
