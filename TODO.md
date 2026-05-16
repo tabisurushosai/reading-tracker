@@ -33,7 +33,7 @@
 - [x] T026: goal-tracker — 実装
 - [x] T027: goal-tracker — テスト・整合
 - [x] T028: monthly-report — 設計
-- [ ] T029: monthly-report — 実装
+- [x] T029: monthly-report — 実装
 - [ ] T030: monthly-report — テスト・整合
 
 ## Phase 4: Premium ゲート (T031-T033)

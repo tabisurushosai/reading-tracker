@@ -148,7 +148,6 @@ import {
 } from "./storage.js";
 import {
   groupByDifficulty,
-  groupByHost,
   loadRange as readLogLoadRange,
   type DifficultyBreakdown,
   type HostBreakdown,
@@ -323,12 +322,36 @@ export const FREE_TIER_TOP_HOSTS = 3;
 // Pure helpers — T029 implements, T030 tests
 // ---------------------------------------------------------------------------
 
+function safeDifficultyPref(settings: Settings | undefined | null): Settings["difficultyPref"] {
+  const pref = settings?.difficultyPref;
+  return pref === "easy" || pref === "medium" || pref === "hard" || pref === "any"
+    ? pref
+    : "any";
+}
+
+function safeDailyGoal(settings: Settings | undefined | null): number {
+  const g = settings?.dailyGoal;
+  return typeof g === "number" && g > 0 ? g : 1;
+}
+
+function countWithPref(log: DailyLog | undefined, pref: Settings["difficultyPref"]): number {
+  if (!log) return 0;
+  if (pref === "any") return log.count ?? 0;
+  return groupByDifficulty(log)[pref];
+}
+
 /**
  * Return the calendar month containing `date` (local time). Falls back to
  * the current month when `date` is missing or invalid so the report page
  * always renders.
  */
-export declare function monthOf(date: Date): MonthRef;
+export function monthOf(date: Date): MonthRef {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+    const now = new Date();
+    return { year: now.getFullYear(), month: now.getMonth() };
+  }
+  return { year: date.getFullYear(), month: date.getMonth() };
+}
 
 /**
  * Compute the inclusive start/end date keys and day count for a MonthRef.
@@ -336,7 +359,28 @@ export declare function monthOf(date: Date): MonthRef;
  * the current year) so a misbehaving caller never produces a "month 13"
  * window that loadRange would treat as empty.
  */
-export declare function monthBounds(ref: MonthRef): MonthBounds;
+export function monthBounds(ref: MonthRef): MonthBounds {
+  const fallbackNow = new Date();
+  const year =
+    ref && typeof ref.year === "number" && Number.isFinite(ref.year)
+      ? Math.floor(ref.year)
+      : fallbackNow.getFullYear();
+  const rawMonth =
+    ref && typeof ref.month === "number" && Number.isFinite(ref.month)
+      ? Math.floor(ref.month)
+      : fallbackNow.getMonth();
+  const month = Math.min(11, Math.max(0, rawMonth));
+  const start = new Date(year, month, 1);
+  // Day 0 of the next month = last day of this month.
+  const lastDay = new Date(year, month + 1, 0);
+  const daysInMonth = lastDay.getDate();
+  return {
+    ref: { year, month },
+    startDateKey: formatDateKey(start),
+    endDateKey: formatDateKey(lastDay),
+    daysInMonth,
+  };
+}
 
 /**
  * Sum reads across the month, returning both the filtered total
@@ -344,53 +388,146 @@ export declare function monthBounds(ref: MonthRef): MonthBounds;
  * the breakdown bar. Composes read-log.groupByDifficulty so the
  * difficulty classification rule stays canonical.
  */
-export declare function computeMonthlyTotals(
+export function computeMonthlyTotals(
   logsByDate: ReadonlyMap<string, DailyLog>,
   bounds: MonthBounds,
   settings: Settings,
-): { totalReads: number; totalReadsUnfiltered: number };
+): { totalReads: number; totalReadsUnfiltered: number } {
+  const pref = safeDifficultyPref(settings);
+  let totalReads = 0;
+  let totalReadsUnfiltered = 0;
+  if (!logsByDate || !bounds) return { totalReads, totalReadsUnfiltered };
+  for (const [key, log] of logsByDate) {
+    if (key < bounds.startDateKey || key > bounds.endDateKey) continue;
+    if (!log) continue;
+    totalReadsUnfiltered += log.count ?? 0;
+    totalReads += countWithPref(log, pref);
+  }
+  return { totalReads, totalReadsUnfiltered };
+}
 
 /**
  * Pre-fill one DailyGridCell per day in the month. Days with no log have
  * count=0 / met=false; days strictly after `today` have inFuture=true so
  * the renderer can mute them.
  */
-export declare function computeDailyGrid(
+export function computeDailyGrid(
   logsByDate: ReadonlyMap<string, DailyLog>,
   bounds: MonthBounds,
   settings: Settings,
   today: Date,
-): DailyGridCell[];
+): DailyGridCell[] {
+  const pref = safeDifficultyPref(settings);
+  const goal = safeDailyGoal(settings);
+  const safeToday =
+    today instanceof Date && !Number.isNaN(today.getTime())
+      ? new Date(today.getFullYear(), today.getMonth(), today.getDate())
+      : new Date();
+  const todayKey = formatDateKey(safeToday);
+  const cells: DailyGridCell[] = [];
+  const limit = Math.min(MAX_DAYS_IN_MONTH, Math.max(0, bounds?.daysInMonth ?? 0));
+  for (let day = 1; day <= limit; day += 1) {
+    const cursor = new Date(bounds.ref.year, bounds.ref.month, day);
+    const dateKey = formatDateKey(cursor);
+    const log = logsByDate?.get?.(dateKey);
+    const count = countWithPref(log, pref);
+    const met = count >= goal;
+    cells.push({
+      dateKey,
+      dayOfMonth: day,
+      dayOfWeek: cursor.getDay(),
+      count,
+      met,
+      inFuture: dateKey > todayKey,
+    });
+  }
+  return cells;
+}
 
 /**
  * Aggregate host counts across every entry in the month. Returns the full
  * list — the view truncates per Premium. Sorted desc by count, asc by
  * host for tie-stability (matches read-log.groupByHost ordering).
  */
-export declare function computeTopHosts(
+export function computeTopHosts(
   logsByDate: ReadonlyMap<string, DailyLog>,
   bounds: MonthBounds,
-): HostBreakdown[];
+): HostBreakdown[] {
+  const counts = new Map<string, number>();
+  if (!logsByDate || !bounds) return [];
+  for (const [key, log] of logsByDate) {
+    if (key < bounds.startDateKey || key > bounds.endDateKey) continue;
+    if (!log?.entries) continue;
+    for (const entry of log.entries) {
+      let host = "";
+      try {
+        host = new URL(entry.url).hostname.toLowerCase();
+      } catch {
+        host = "";
+      }
+      if (!host) continue;
+      counts.set(host, (counts.get(host) ?? 0) + 1);
+    }
+  }
+  const rows: HostBreakdown[] = [];
+  for (const [host, count] of counts) rows.push({ host, count });
+  rows.sort((a, b) => {
+    if (b.count !== a.count) return b.count - a.count;
+    return a.host < b.host ? -1 : a.host > b.host ? 1 : 0;
+  });
+  return rows;
+}
 
 /**
  * Aggregate difficulty buckets across every entry in the month. Always
  * unfiltered by difficultyPref so the breakdown bar can show what the
  * user actually read (independent of their goal-difficulty preference).
  */
-export declare function computeDifficultyMix(
+export function computeDifficultyMix(
   logsByDate: ReadonlyMap<string, DailyLog>,
   bounds: MonthBounds,
-): DifficultyBreakdown;
+): DifficultyBreakdown {
+  const out: DifficultyBreakdown = { easy: 0, medium: 0, hard: 0, unknown: 0 };
+  if (!logsByDate || !bounds) return out;
+  for (const [key, log] of logsByDate) {
+    if (key < bounds.startDateKey || key > bounds.endDateKey) continue;
+    if (!log) continue;
+    const part = groupByDifficulty(log);
+    out.easy += part.easy;
+    out.medium += part.medium;
+    out.hard += part.hard;
+    out.unknown += part.unknown;
+  }
+  return out;
+}
 
 /**
  * Bucket reads by Date#getDay() (0=Sun..6=Sat). Index 0..6 is locale-free;
  * the view labels the buckets per chrome.i18n.
  */
-export declare function computeByDayOfWeek(
+export function computeByDayOfWeek(
   logsByDate: ReadonlyMap<string, DailyLog>,
   bounds: MonthBounds,
   settings: Settings,
-): DayOfWeekBreakdown;
+): DayOfWeekBreakdown {
+  const pref = safeDifficultyPref(settings);
+  const counts: number[] = new Array(DAYS_IN_WEEK).fill(0);
+  if (!logsByDate || !bounds) return { counts };
+  for (const [key, log] of logsByDate) {
+    if (key < bounds.startDateKey || key > bounds.endDateKey) continue;
+    if (!log) continue;
+    const parts = key.split("-");
+    if (parts.length !== 3) continue;
+    const y = Number(parts[0]);
+    const m = Number(parts[1]);
+    const d = Number(parts[2]);
+    if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) continue;
+    const dow = new Date(y, m - 1, d).getDay();
+    if (dow < 0 || dow >= DAYS_IN_WEEK) continue;
+    counts[dow] += countWithPref(log, pref);
+  }
+  return { counts };
+}
 
 /**
  * Compute the month-over-month comparison. `today` is needed to derive
@@ -399,41 +536,145 @@ export declare function computeByDayOfWeek(
  * null-valued comparison fields when `previousLogsByDate` is empty so the
  * view renders "—" instead of dividing by zero.
  */
-export declare function computeMonthOverMonth(
+export function computeMonthOverMonth(
   currentLogsByDate: ReadonlyMap<string, DailyLog>,
   previousLogsByDate: ReadonlyMap<string, DailyLog>,
   currentBounds: MonthBounds,
   previousBounds: MonthBounds,
   settings: Settings,
   today: Date,
-): MonthOverMonth;
+): MonthOverMonth {
+  const totalCurrent = computeMonthlyTotals(currentLogsByDate, currentBounds, settings).totalReads;
+  const previousTotals = computeMonthlyTotals(
+    previousLogsByDate,
+    previousBounds,
+    settings,
+  ).totalReads;
+  const safeToday =
+    today instanceof Date && !Number.isNaN(today.getTime())
+      ? new Date(today.getFullYear(), today.getMonth(), today.getDate())
+      : new Date();
+  const todayKey = formatDateKey(safeToday);
+  let elapsedDaysCurrent: number;
+  if (todayKey < currentBounds.startDateKey) {
+    // Today precedes the requested month → caller is viewing a future month.
+    elapsedDaysCurrent = 0;
+  } else if (todayKey > currentBounds.endDateKey) {
+    // Today is after the month → full month is "elapsed".
+    elapsedDaysCurrent = currentBounds.daysInMonth;
+  } else {
+    elapsedDaysCurrent = safeToday.getDate();
+  }
+  const perDayCurrent =
+    elapsedDaysCurrent > 0 ? totalCurrent / elapsedDaysCurrent : 0;
+  const hasPrevious =
+    previousLogsByDate && previousLogsByDate.size > 0 && previousTotals > 0;
+  const totalPrevious = hasPrevious ? previousTotals : null;
+  const perDayPrevious =
+    hasPrevious && previousBounds.daysInMonth > 0
+      ? previousTotals / previousBounds.daysInMonth
+      : null;
+  const deltaPerDay =
+    perDayPrevious === null ? null : perDayCurrent - perDayPrevious;
+  return {
+    totalCurrent,
+    totalPrevious,
+    perDayCurrent,
+    perDayPrevious,
+    deltaPerDay,
+    elapsedDaysCurrent,
+  };
+}
 
 /**
  * Longest consecutive-days run that lies entirely within `bounds`, and the
  * number of distinct days inside the month with count >= 1. Streak is
  * intentionally not filtered by difficultyPref (matches goal-tracker.computeStreak).
  */
-export declare function computeMonthlyStreak(
+export function computeMonthlyStreak(
   logsByDate: ReadonlyMap<string, DailyLog>,
   bounds: MonthBounds,
-): MonthlyStreak;
+): MonthlyStreak {
+  if (!logsByDate || !bounds) return { longestInMonth: 0, activeDays: 0 };
+  let longestInMonth = 0;
+  let activeDays = 0;
+  let run = 0;
+  const limit = Math.min(MAX_DAYS_IN_MONTH, Math.max(0, bounds.daysInMonth));
+  for (let day = 1; day <= limit; day += 1) {
+    const cursor = new Date(bounds.ref.year, bounds.ref.month, day);
+    const key = formatDateKey(cursor);
+    const log = logsByDate.get(key);
+    if (log && (log.count ?? 0) >= 1) {
+      run += 1;
+      activeDays += 1;
+      if (run > longestInMonth) longestInMonth = run;
+    } else {
+      run = 0;
+    }
+  }
+  return { longestInMonth, activeDays };
+}
 
 /**
  * Compose every helper into a MonthlyReport. Pure; T029 implements as a
  * thin wrapper so callers fetch one object and get the full view.
  */
-export declare function evaluateMonthlyReport(
+export function evaluateMonthlyReport(
   ref: MonthRef,
   currentLogsByDate: ReadonlyMap<string, DailyLog>,
   previousLogsByDate: ReadonlyMap<string, DailyLog>,
   settings: Settings,
   today: Date,
   now: number,
-): MonthlyReport;
+): MonthlyReport {
+  const bounds = monthBounds(ref);
+  const prevRef: MonthRef =
+    bounds.ref.month === 0
+      ? { year: bounds.ref.year - 1, month: 11 }
+      : { year: bounds.ref.year, month: bounds.ref.month - 1 };
+  const previousBounds = monthBounds(prevRef);
+  const totals = computeMonthlyTotals(currentLogsByDate, bounds, settings);
+  const dailyGrid = computeDailyGrid(currentLogsByDate, bounds, settings, today);
+  const topHosts = computeTopHosts(currentLogsByDate, bounds);
+  const byDifficulty = computeDifficultyMix(currentLogsByDate, bounds);
+  const byDayOfWeek = computeByDayOfWeek(currentLogsByDate, bounds, settings);
+  const comparison = computeMonthOverMonth(
+    currentLogsByDate,
+    previousLogsByDate,
+    bounds,
+    previousBounds,
+    settings,
+    today,
+  );
+  const streak = computeMonthlyStreak(currentLogsByDate, bounds);
+  return {
+    ref: bounds.ref,
+    bounds,
+    totalReads: totals.totalReads,
+    totalReadsUnfiltered: totals.totalReadsUnfiltered,
+    byDifficulty,
+    topHosts,
+    byDayOfWeek,
+    dailyGrid,
+    comparison,
+    streak,
+    evaluatedAt: typeof now === "number" && Number.isFinite(now) ? now : Date.now(),
+  };
+}
 
 // ---------------------------------------------------------------------------
 // Async seam — T029 wires to chrome.storage / read-log; T030 fakes via ports
 // ---------------------------------------------------------------------------
+
+function emptyMonthlyReport(ref: MonthRef, today: Date, now: number): MonthlyReport {
+  const settings: Settings = {
+    schemaVersion: 1,
+    dailyGoal: 1,
+    difficultyPref: "any",
+    theme: "auto",
+  };
+  return evaluateMonthlyReport(ref, new Map(), new Map(), settings, today, now);
+}
 
 /**
  * Load the DailyLogs for `ref` and the previous month, then evaluate. When
@@ -446,15 +687,92 @@ export declare function evaluateMonthlyReport(
  * × <1 KB per log is well inside the chrome.storage.local budget; we do
  * not paginate here.
  */
-export declare function loadMonthlyReport(
+export async function loadMonthlyReport(
   ref?: MonthRef,
   ports?: MonthlyReportPorts,
-): Promise<MonthlyReport>;
+): Promise<MonthlyReport> {
+  const nowFn = ports?.now ?? Date.now;
+  let nowMs: number;
+  try {
+    const v = nowFn();
+    nowMs = typeof v === "number" && Number.isFinite(v) ? v : Date.now();
+  } catch {
+    nowMs = Date.now();
+  }
+  const today = new Date(nowMs);
+  const targetRef: MonthRef =
+    ref &&
+    typeof ref.year === "number" &&
+    Number.isFinite(ref.year) &&
+    typeof ref.month === "number" &&
+    Number.isFinite(ref.month)
+      ? { year: Math.floor(ref.year), month: Math.min(11, Math.max(0, Math.floor(ref.month))) }
+      : monthOf(today);
+  const bounds = monthBounds(targetRef);
+  const prevRef: MonthRef =
+    bounds.ref.month === 0
+      ? { year: bounds.ref.year - 1, month: 11 }
+      : { year: bounds.ref.year, month: bounds.ref.month - 1 };
+  const prevBounds = monthBounds(prevRef);
 
-// Touch the imported helpers so they are not considered unused while the
-// module is in declare-only design phase. T029 replaces these references
-// with real call sites inside the implementations.
-void readLogLoadRange;
-void groupByDifficulty;
-void groupByHost;
-void formatDateKey;
+  let settings: Settings;
+  try {
+    const { settings: raw } = await chrome.storage.local.get("settings");
+    if (raw && typeof raw === "object") {
+      const r = raw as Partial<Settings>;
+      settings = {
+        schemaVersion: 1,
+        dailyGoal: typeof r.dailyGoal === "number" && r.dailyGoal > 0 ? r.dailyGoal : 1,
+        difficultyPref:
+          r.difficultyPref === "easy" ||
+          r.difficultyPref === "medium" ||
+          r.difficultyPref === "hard" ||
+          r.difficultyPref === "any"
+            ? r.difficultyPref
+            : "any",
+        theme:
+          r.theme === "light" || r.theme === "dark" || r.theme === "auto"
+            ? r.theme
+            : "auto",
+      };
+    } else {
+      settings = { schemaVersion: 1, dailyGoal: 1, difficultyPref: "any", theme: "auto" };
+    }
+  } catch {
+    settings = { schemaVersion: 1, dailyGoal: 1, difficultyPref: "any", theme: "auto" };
+  }
+
+  const loadRangeFn = ports?.loadRange ?? readLogLoadRange;
+  const currentStart = new Date(bounds.ref.year, bounds.ref.month, 1);
+  const currentEnd = new Date(bounds.ref.year, bounds.ref.month, bounds.daysInMonth);
+  const prevStart = new Date(prevBounds.ref.year, prevBounds.ref.month, 1);
+  const prevEnd = new Date(prevBounds.ref.year, prevBounds.ref.month, prevBounds.daysInMonth);
+
+  let currentLogs: Map<string, DailyLog>;
+  let previousLogs: Map<string, DailyLog>;
+  try {
+    currentLogs = await loadRangeFn(currentStart, currentEnd);
+  } catch {
+    currentLogs = new Map();
+  }
+  if (!currentLogs) currentLogs = new Map();
+  try {
+    previousLogs = await loadRangeFn(prevStart, prevEnd);
+  } catch {
+    previousLogs = new Map();
+  }
+  if (!previousLogs) previousLogs = new Map();
+
+  try {
+    return evaluateMonthlyReport(
+      bounds.ref,
+      currentLogs,
+      previousLogs,
+      settings,
+      today,
+      nowMs,
+    );
+  } catch {
+    return emptyMonthlyReport(bounds.ref, today, nowMs);
+  }
+}
