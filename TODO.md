@@ -23,7 +23,7 @@
 - [x] T016: article-detect — 設計
 - [x] T017: article-detect — 実装
 - [x] T018: article-detect — テスト・整合
-- [ ] T019: difficulty-score — 設計
+- [x] T019: difficulty-score — 設計
 - [ ] T020: difficulty-score — 実装
 - [ ] T021: difficulty-score — テスト・整合
 - [ ] T022: read-log — 設計
