@@ -1,0 +1,164 @@
+{
+  "appName": {
+    "message": "Reading Tracker",
+    "description": "拡張機能の名前"
+  },
+  "appDesc": {
+    "message": "Track web article reading with difficulty-based comprehension progress",
+    "description": "拡張機能の説明"
+  },
+  "popup_title": {
+    "message": "Reading Tracker",
+    "description": "ポップアップのタイトル"
+  },
+  "popup_current_article": {
+    "message": "Current article",
+    "description": "ポップアップ: 現在開いている記事のラベル"
+  },
+  "popup_no_article": {
+    "message": "No article detected",
+    "description": "ポップアップ: 記事未検出時のメッセージ"
+  },
+  "popup_difficulty": {
+    "message": "Difficulty",
+    "description": "ポップアップ: 難易度ラベル"
+  },
+  "popup_difficulty_easy": {
+    "message": "Easy",
+    "description": "難易度: 易"
+  },
+  "popup_difficulty_medium": {
+    "message": "Medium",
+    "description": "難易度: 中"
+  },
+  "popup_difficulty_hard": {
+    "message": "Hard",
+    "description": "難易度: 難"
+  },
+  "popup_log_read": {
+    "message": "Log as read",
+    "description": "ポップアップ: 読了ボタン"
+  },
+  "popup_logged": {
+    "message": "Logged",
+    "description": "ポップアップ: 記録完了メッセージ"
+  },
+  "popup_today_count": {
+    "message": "Today's reads",
+    "description": "ポップアップ: 本日の読了数ラベル"
+  },
+  "popup_goal": {
+    "message": "Goal",
+    "description": "ポップアップ: 目標ラベル"
+  },
+  "popup_open_options": {
+    "message": "Open settings",
+    "description": "ポップアップ: 設定リンク"
+  },
+  "popup_view_report": {
+    "message": "View monthly report",
+    "description": "ポップアップ: 月次レポートへのリンク"
+  },
+  "options_title": {
+    "message": "Settings",
+    "description": "オプションページのタイトル"
+  },
+  "options_language": {
+    "message": "Language",
+    "description": "オプション: 言語設定"
+  },
+  "options_daily_goal": {
+    "message": "Daily article goal",
+    "description": "オプション: 1日の目標"
+  },
+  "options_difficulty_pref": {
+    "message": "Target difficulty",
+    "description": "オプション: 目標難易度設定"
+  },
+  "options_theme": {
+    "message": "Theme",
+    "description": "オプション: テーマ設定"
+  },
+  "options_theme_auto": {
+    "message": "Auto",
+    "description": "テーマ: 自動"
+  },
+  "options_theme_light": {
+    "message": "Light",
+    "description": "テーマ: ライト"
+  },
+  "options_theme_dark": {
+    "message": "Dark",
+    "description": "テーマ: ダーク"
+  },
+  "options_export": {
+    "message": "Export data",
+    "description": "オプション: データエクスポートボタン"
+  },
+  "options_import": {
+    "message": "Import data",
+    "description": "オプション: データインポートボタン"
+  },
+  "options_reset": {
+    "message": "Delete all data",
+    "description": "オプション: データリセットボタン"
+  },
+  "options_reset_confirm": {
+    "message": "Are you sure you want to delete all reading records? This action cannot be undone.",
+    "description": "オプション: リセット確認"
+  },
+  "options_saved": {
+    "message": "Saved",
+    "description": "オプション: 保存完了メッセージ"
+  },
+  "options_premium": {
+    "message": "Premium features",
+    "description": "オプション: プレミアムセクション"
+  },
+  "options_premium_unlock": {
+    "message": "Unlock Premium ($3)",
+    "description": "オプション: プレミアム購入ボタン"
+  },
+  "options_trial_remaining": {
+    "message": "$DAYS$ days left in free trial",
+    "description": "オプション: お試し期間残り",
+    "placeholders": {
+      "days": {
+        "content": "$1",
+        "example": "5"
+      }
+    }
+  },
+  "options_premium_active": {
+    "message": "Premium features are active",
+    "description": "オプション: プレミアム有効表示"
+  },
+  "report_title": {
+    "message": "Monthly report",
+    "description": "月次レポートのタイトル"
+  },
+  "report_total_articles": {
+    "message": "Articles read this month",
+    "description": "レポート: 月間総読了数"
+  },
+  "report_by_difficulty": {
+    "message": "Breakdown by difficulty",
+    "description": "レポート: 難易度別グラフ"
+  },
+  "report_streak": {
+    "message": "Reading streak (days)",
+    "description": "レポート: 連続日数"
+  },
+  "common_save": {
+    "message": "Save",
+    "description": "汎用: 保存"
+  },
+  "common_cancel": {
+    "message": "Cancel",
+    "description": "汎用: キャンセル"
+  },
+  "common_close": {
+    "message": "Close",
+    "description": "汎用: 閉じる"
+  }
+}
