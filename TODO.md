@@ -26,7 +26,7 @@
 - [x] T019: difficulty-score — 設計
 - [x] T020: difficulty-score — 実装
 - [x] T021: difficulty-score — テスト・整合
-- [ ] T022: read-log — 設計
+- [x] T022: read-log — 設計
 - [ ] T023: read-log — 実装
 - [ ] T024: read-log — テスト・整合
 - [ ] T025: goal-tracker — 設計
