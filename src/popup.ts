@@ -13,7 +13,12 @@
  */
 
 import { applyI18n, getLocale, t } from "./i18n.js";
-import { detectActiveArticle, type ArticleCandidate } from "./article-detect.js";
+import {
+  detectActiveArticle,
+  extractArticleBody,
+  type ArticleCandidate,
+} from "./article-detect.js";
+import { scoreArticle, type Difficulty } from "./difficulty-score.js";
 
 interface Settings {
   schemaVersion: number;
@@ -26,6 +31,7 @@ interface DailyLogEntry {
   url: string;
   title: string;
   ts: number;
+  difficulty?: Difficulty;
 }
 
 interface DailyLog {
@@ -82,6 +88,27 @@ async function appendTodayLog(entry: DailyLogEntry): Promise<DailyLog> {
   return next;
 }
 
+/**
+ * Sample the active tab's body and return a Difficulty bucket, or undefined
+ * when scoring is not possible (missing tabId, blocked scripting, body too
+ * short, mixed-language sample). Never throws — callers fall back to
+ * storing the entry without a difficulty field.
+ */
+async function scoreActiveTab(): Promise<Difficulty | undefined> {
+  try {
+    if (!chrome.tabs?.query) return undefined;
+    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+    const tabId = tabs[0]?.id;
+    if (typeof tabId !== "number") return undefined;
+    const text = await extractArticleBody(tabId);
+    if (!text) return undefined;
+    const result = scoreArticle({ text });
+    return result.difficulty === "unknown" ? undefined : result.difficulty;
+  } catch {
+    return undefined;
+  }
+}
+
 function renderArticle(article: ArticleCandidate | null): ArticleCandidate | null {
   const titleEl = $<HTMLParagraphElement>("current-article-title");
   const logBtn = $<HTMLButtonElement>("log-read-btn");
@@ -128,11 +155,14 @@ async function init(): Promise<void> {
     const btn = $<HTMLButtonElement>("log-read-btn");
     btn.disabled = true;
     try {
-      const updated = await appendTodayLog({
+      const difficulty = await scoreActiveTab();
+      const entry: DailyLogEntry = {
         url: article.url,
         title: article.title,
         ts: Date.now(),
-      });
+      };
+      if (difficulty) entry.difficulty = difficulty;
+      const updated = await appendTodayLog(entry);
       renderStats(updated, settings);
       flashLogged();
       article = null;

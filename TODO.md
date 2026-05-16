@@ -25,7 +25,7 @@
 - [x] T018: article-detect — テスト・整合
 - [x] T019: difficulty-score — 設計
 - [x] T020: difficulty-score — 実装
-- [ ] T021: difficulty-score — テスト・整合
+- [x] T021: difficulty-score — テスト・整合
 - [ ] T022: read-log — 設計
 - [ ] T023: read-log — 実装
 - [ ] T024: read-log — テスト・整合
