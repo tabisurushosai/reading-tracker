@@ -1,0 +1,17 @@
+{
+  "name": "reading-tracker",
+  "version": "1.0.0",
+  "description": "Web記事の読書記録、難易度別読解進捗",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "lint": "tsc --noEmit",
+    "package": "npm run build && cd dist && zip -r ../release/reading-tracker.zip . && cd .. && zip -ur release/reading-tracker.zip manifest.json _locales icons"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.268",
+    "typescript": "^5.4.5",
+    "vite": "^5.2.11"
+  }
+}
