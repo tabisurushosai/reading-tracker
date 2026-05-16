@@ -144,13 +144,46 @@ export const MAX_BODY_SAMPLE_CHARS = 4096;
  * Classify a URL without touching chrome.* APIs. Pure, sync, exception-free
  * (invalid URLs collapse to `unsupported-scheme` with scheme="invalid").
  */
-export declare function classifyUrl(rawUrl: string | undefined): UrlClassification;
+export function classifyUrl(rawUrl: string | undefined): UrlClassification {
+  if (!rawUrl) return { kind: "unsupported-scheme", scheme: "invalid" };
+  let parsed: URL;
+  try {
+    parsed = new URL(rawUrl);
+  } catch {
+    return { kind: "unsupported-scheme", scheme: "invalid" };
+  }
+  const scheme = parsed.protocol.toLowerCase();
+  if (scheme !== "http:" && scheme !== "https:") {
+    return { kind: "unsupported-scheme", scheme };
+  }
+  if (UNSUPPORTED_SCHEMES.includes(scheme)) {
+    return { kind: "unsupported-scheme", scheme };
+  }
+  const host = parsed.hostname.toLowerCase();
+  if (!host) return { kind: "unsupported-scheme", scheme: "invalid" };
+  if (isRejectedHost(host)) {
+    return { kind: "rejected-host", host };
+  }
+  return { kind: "candidate", host };
+}
 
 /** True when `host` matches any entry in REJECTED_HOSTS (with subdomain rule). */
-export declare function isRejectedHost(host: string): boolean;
+export function isRejectedHost(host: string): boolean {
+  if (!host) return false;
+  const lower = host.toLowerCase();
+  for (const rejected of REJECTED_HOSTS) {
+    if (lower === rejected) return true;
+    if (lower.endsWith("." + rejected)) return true;
+  }
+  return false;
+}
 
 /** Trim + fall back to URL. Exposed for popup.ts symmetry and easy testing. */
-export declare function pickDisplayTitle(rawTitle: string | undefined, url: string): string;
+export function pickDisplayTitle(rawTitle: string | undefined, url: string): string {
+  const trimmed = rawTitle?.trim();
+  if (trimmed) return trimmed;
+  return url;
+}
 
 // ---------------------------------------------------------------------------
 // Async surfaces — T017 wires these to chrome.tabs / chrome.scripting
@@ -160,16 +193,57 @@ export declare function pickDisplayTitle(rawTitle: string | undefined, url: stri
  * Inspect the active tab and return a structured detection result.
  * Never throws; callers branch on `.kind`.
  */
-export declare function detectActiveArticle(): Promise<ArticleDetection>;
+export async function detectActiveArticle(): Promise<ArticleDetection> {
+  if (typeof chrome === "undefined" || !chrome.tabs?.query) {
+    return { kind: "unsupported" };
+  }
+  let tab: chrome.tabs.Tab | undefined;
+  try {
+    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+    tab = tabs[0];
+  } catch {
+    return { kind: "unsupported" };
+  }
+  if (!tab || !tab.url) return { kind: "unsupported" };
+  const classification = classifyUrl(tab.url);
+  if (classification.kind !== "candidate") {
+    return { kind: "rejected", reason: classification };
+  }
+  const article: ArticleCandidate = {
+    url: tab.url,
+    title: pickDisplayTitle(tab.title, tab.url),
+    host: classification.host,
+  };
+  return { kind: "article", article };
+}
 
 /**
  * One-shot body sample for the given tab, gated behind a user click.
  * Returns null when injection is blocked (restricted page, no activeTab,
  * etc.) so callers can fall back to metadata-only logging.
  *
- * Implementation note for T017: use chrome.scripting.executeScript with a
- * pure function that reads document.body.innerText, trims, and slices to
- * MAX_BODY_SAMPLE_CHARS. Do NOT request host_permissions to make this work
- * everywhere — activeTab is sufficient at click time.
+ * activeTab grants the host permission at click time; the "scripting"
+ * permission must still be declared in manifest.json for executeScript
+ * to be available. When unavailable we return null so callers can degrade
+ * to metadata-only logging without surfacing an error.
  */
-export declare function extractArticleBody(tabId: number): Promise<string | null>;
+export async function extractArticleBody(tabId: number): Promise<string | null> {
+  if (typeof chrome === "undefined" || !chrome.scripting?.executeScript) {
+    return null;
+  }
+  try {
+    const results = await chrome.scripting.executeScript({
+      target: { tabId },
+      args: [MAX_BODY_SAMPLE_CHARS],
+      func: (max: number) => {
+        const text = (document.body?.innerText ?? "").trim();
+        return text.slice(0, max);
+      },
+    });
+    const raw = results?.[0]?.result;
+    if (typeof raw !== "string" || raw.length === 0) return null;
+    return raw.slice(0, MAX_BODY_SAMPLE_CHARS);
+  } catch {
+    return null;
+  }
+}
