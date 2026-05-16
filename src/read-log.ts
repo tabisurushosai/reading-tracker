@@ -106,10 +106,14 @@
  * fakes layered over the storage.ts wrappers.
  */
 
-import type {
-  DailyLog,
-  DailyLogEntry,
-  DifficultyPref,
+import {
+  DAILY_LOG_PREFIX,
+  dailyLogKey,
+  formatDateKey,
+  loadDailyLog,
+  type DailyLog,
+  type DailyLogEntry,
+  type DifficultyPref,
 } from "./storage.js";
 import type {
   ArticleCandidate,
@@ -185,22 +189,61 @@ export const STREAK_TOLERANCE_DAYS = 0;
  * Comparison is case-sensitive on the URL string (URLs already normalised by
  * article-detect.classifyUrl) so trivially different casings are not merged.
  */
-export declare function isSameDayDuplicate(
+export function isSameDayDuplicate(
   log: DailyLog,
   candidate: ArticleCandidate,
-): boolean;
+): boolean {
+  if (!log || !candidate?.url) return false;
+  const url = candidate.url;
+  for (const entry of log.entries) {
+    if (entry.url === url) return true;
+  }
+  return false;
+}
 
 /**
  * Roll a DailyLog up into a DifficultyBreakdown. Entries with no difficulty
  * field fall into the `unknown` bucket — never silently re-classified.
  */
-export declare function groupByDifficulty(log: DailyLog): DifficultyBreakdown;
+export function groupByDifficulty(log: DailyLog): DifficultyBreakdown {
+  const out: DifficultyBreakdown = { easy: 0, medium: 0, hard: 0, unknown: 0 };
+  if (!log?.entries) return out;
+  for (const entry of log.entries) {
+    const d = entry.difficulty;
+    if (d === "easy" || d === "medium" || d === "hard") {
+      out[d] += 1;
+    } else {
+      out.unknown += 1;
+    }
+  }
+  return out;
+}
 
 /**
  * Roll up by lowercased hostname. Result is sorted desc by count, asc by host
  * for ties so monthly-report renders are stable across renders.
  */
-export declare function groupByHost(log: DailyLog): HostBreakdown[];
+export function groupByHost(log: DailyLog): HostBreakdown[] {
+  const counts = new Map<string, number>();
+  if (!log?.entries) return [];
+  for (const entry of log.entries) {
+    let host = "";
+    try {
+      host = new URL(entry.url).hostname.toLowerCase();
+    } catch {
+      host = "";
+    }
+    if (!host) continue;
+    counts.set(host, (counts.get(host) ?? 0) + 1);
+  }
+  const rows: HostBreakdown[] = [];
+  for (const [host, count] of counts) rows.push({ host, count });
+  rows.sort((a, b) => {
+    if (b.count !== a.count) return b.count - a.count;
+    return a.host < b.host ? -1 : a.host > b.host ? 1 : 0;
+  });
+  return rows;
+}
 
 /**
  * Return the current daily streak ending today (inclusive). `logsByDate` is a
@@ -208,16 +251,42 @@ export declare function groupByHost(log: DailyLog): HostBreakdown[];
  * any day with count >= 1. STREAK_TOLERANCE_DAYS lets a future setting allow
  * "miss one day" without breaking the streak; v1 keeps it at 0.
  */
-export declare function streakDays(
+export function streakDays(
   logsByDate: ReadonlyMap<string, DailyLog>,
   today: Date,
-): number;
+): number {
+  if (!logsByDate || !(today instanceof Date) || Number.isNaN(today.getTime())) {
+    return 0;
+  }
+  let streak = 0;
+  let tolerance = STREAK_TOLERANCE_DAYS;
+  const cursor = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  // Walk backward day-by-day; stop once tolerance is exhausted by a zero day.
+  // Bound at 366 to avoid pathological infinite loops on a corrupted map.
+  for (let i = 0; i < 366; i += 1) {
+    const key = formatDateKey(cursor);
+    const log = logsByDate.get(key);
+    if (log && log.count >= 1) {
+      streak += 1;
+    } else if (tolerance > 0) {
+      tolerance -= 1;
+    } else {
+      break;
+    }
+    cursor.setDate(cursor.getDate() - 1);
+  }
+  return streak;
+}
 
 /**
  * Compact one DailyLog into the shape goal-tracker shows on the popup:
  * total count, difficulty breakdown, and whether the daily goal is met.
+ *
+ * `pref` filters which entries count toward the daily goal: "any" counts all,
+ * a specific bucket counts only matching entries. byDifficulty is unfiltered
+ * so the UI can still show a full breakdown beside the goal-progress bar.
  */
-export declare function summarizeLog(
+export function summarizeLog(
   log: DailyLog,
   dailyGoal: number,
   pref: DifficultyPref,
@@ -225,11 +294,28 @@ export declare function summarizeLog(
   count: number;
   goalMet: boolean;
   byDifficulty: DifficultyBreakdown;
-};
+} {
+  const byDifficulty = groupByDifficulty(log);
+  const count =
+    pref === "any"
+      ? log?.count ?? 0
+      : byDifficulty[pref];
+  const goal = dailyGoal > 0 ? dailyGoal : 1;
+  return {
+    count,
+    goalMet: count >= goal,
+    byDifficulty,
+  };
+}
 
 // ---------------------------------------------------------------------------
 // Async seams — T023 implements, T024 tests with in-memory storage fakes
 // ---------------------------------------------------------------------------
+
+function nowDate(now?: () => number): Date {
+  const ts = typeof now === "function" ? now() : Date.now();
+  return new Date(ts);
+}
 
 /**
  * Orchestrate detect → optional score → append. Never throws. Dedupes by
@@ -237,7 +323,63 @@ export declare function summarizeLog(
  * is stored without a difficulty field, mirroring difficulty-score's
  * "unknown" contract.
  */
-export declare function recordRead(ports: ReadLogPorts): Promise<RecordReadResult>;
+export async function recordRead(ports: ReadLogPorts): Promise<RecordReadResult> {
+  if (!ports || typeof ports.detect !== "function") {
+    return { kind: "unsupported" };
+  }
+  let detection: ArticleDetection;
+  try {
+    detection = await ports.detect();
+  } catch {
+    return { kind: "unsupported" };
+  }
+  if (!detection || detection.kind === "unsupported") {
+    return { kind: "unsupported" };
+  }
+  if (detection.kind === "rejected") {
+    return { kind: "rejected", reason: detection };
+  }
+  const article = detection.article;
+  const today = nowDate(ports.now);
+  const ts = typeof ports.now === "function" ? ports.now() : Date.now();
+  let current: DailyLog;
+  try {
+    current = await loadDailyLog(today);
+  } catch {
+    return { kind: "unsupported" };
+  }
+  const existing = current.entries.find((e) => e.url === article.url);
+  if (existing) {
+    return { kind: "duplicate", entry: existing, log: current };
+  }
+  let difficulty: Difficulty | undefined;
+  if (typeof ports.score === "function") {
+    try {
+      const d = await ports.score(article);
+      if (d === "easy" || d === "medium" || d === "hard") difficulty = d;
+    } catch {
+      difficulty = undefined;
+    }
+  }
+  const entry: DailyLogEntry = {
+    url: article.url,
+    title: article.title,
+    ts,
+  };
+  if (difficulty) entry.difficulty = difficulty;
+  const merged = [...current.entries, entry];
+  const trimmed =
+    merged.length > MAX_ENTRIES_PER_DAY
+      ? merged.slice(merged.length - MAX_ENTRIES_PER_DAY)
+      : merged;
+  const next: DailyLog = { count: trimmed.length, entries: trimmed };
+  try {
+    await chrome.storage.local.set({ [dailyLogKey(today)]: next });
+  } catch {
+    return { kind: "unsupported" };
+  }
+  return { kind: "logged", entry, log: next };
+}
 
 /**
  * Remove the most recent entry from today's log. Returns the updated log,
@@ -245,7 +387,24 @@ export declare function recordRead(ports: ReadLogPorts): Promise<RecordReadResul
  * 取り消し" affordance immediately after recordRead() so the user can fix a
  * mistaken click without opening Options.
  */
-export declare function undoLastRead(now?: () => number): Promise<DailyLog | null>;
+export async function undoLastRead(now?: () => number): Promise<DailyLog | null> {
+  const today = nowDate(now);
+  let current: DailyLog;
+  try {
+    current = await loadDailyLog(today);
+  } catch {
+    return null;
+  }
+  if (!current.entries.length) return null;
+  const entries = current.entries.slice(0, -1);
+  const next: DailyLog = { count: entries.length, entries };
+  try {
+    await chrome.storage.local.set({ [dailyLogKey(today)]: next });
+  } catch {
+    return null;
+  }
+  return next;
+}
 
 /**
  * Load DailyLogs in `[from, to]` inclusive, keyed by date string
@@ -255,7 +414,41 @@ export declare function undoLastRead(now?: () => number): Promise<DailyLog | nul
  *
  * Inverted ranges (from > to) return an empty Map without throwing.
  */
-export declare function loadRange(
+export async function loadRange(
   from: Date,
   to: Date,
-): Promise<Map<string, DailyLog>>;
+): Promise<Map<string, DailyLog>> {
+  const out = new Map<string, DailyLog>();
+  if (
+    !(from instanceof Date) ||
+    !(to instanceof Date) ||
+    Number.isNaN(from.getTime()) ||
+    Number.isNaN(to.getTime())
+  ) {
+    return out;
+  }
+  const fromKey = formatDateKey(from);
+  const toKey = formatDateKey(to);
+  if (fromKey > toKey) return out;
+  let allKeys: string[];
+  try {
+    const all = await chrome.storage.local.get(null);
+    allKeys = Object.keys(all).filter((k) => k.startsWith(DAILY_LOG_PREFIX));
+    const wanted = allKeys.filter((k) => {
+      const dateKey = k.slice(DAILY_LOG_PREFIX.length);
+      return dateKey >= fromKey && dateKey <= toKey;
+    });
+    for (const k of wanted) {
+      const raw = (all as Record<string, unknown>)[k];
+      if (!raw || typeof raw !== "object") continue;
+      const log = raw as DailyLog;
+      const entries = Array.isArray(log.entries) ? log.entries : [];
+      const count = typeof log.count === "number" ? log.count : entries.length;
+      if (count <= 0 && entries.length === 0) continue;
+      out.set(k.slice(DAILY_LOG_PREFIX.length), { count, entries });
+    }
+  } catch {
+    return out;
+  }
+  return out;
+}
