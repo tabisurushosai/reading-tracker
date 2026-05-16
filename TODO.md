@@ -29,7 +29,7 @@
 - [x] T022: read-log — 設計
 - [x] T023: read-log — 実装
 - [x] T024: read-log — テスト・整合
-- [ ] T025: goal-tracker — 設計
+- [x] T025: goal-tracker — 設計
 - [ ] T026: goal-tracker — 実装
 - [ ] T027: goal-tracker — テスト・整合
 - [ ] T028: monthly-report — 設計
