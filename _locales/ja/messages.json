@@ -133,6 +133,40 @@
     "message": "プレミアム機能が有効です",
     "description": "オプション: プレミアム有効表示"
   },
+  "options_premium_trial_expired": {
+    "message": "無料お試しは終了しました。プレミアムを解放すると詳細統計と無制限機能が使えます。",
+    "description": "オプション: お試し終了時の説明"
+  },
+  "options_premium_locked": {
+    "message": "プレミアム限定",
+    "description": "オプション: プレミアム限定機能バッジ"
+  },
+  "options_premium_locked_hint": {
+    "message": "この機能はプレミアム機能です。お試し期間中またはプレミアム解放後に使用できます。",
+    "description": "オプション: プレミアム限定機能のヒント"
+  },
+  "popup_trial_banner": {
+    "message": "無料お試し残り $DAYS$ 日",
+    "description": "ポップアップ: 無料お試し残り日数バナー",
+    "placeholders": {
+      "days": {
+        "content": "$1",
+        "example": "5"
+      }
+    }
+  },
+  "popup_trial_expired": {
+    "message": "無料お試しは終了しました",
+    "description": "ポップアップ: お試し終了バナー"
+  },
+  "popup_trial_upgrade": {
+    "message": "プレミアムを解放",
+    "description": "ポップアップ: プレミアム解放 CTA"
+  },
+  "popup_premium_active": {
+    "message": "プレミアム有効",
+    "description": "ポップアップ: プレミアム有効バッジ"
+  },
   "report_title": {
     "message": "月次レポート",
     "description": "月次レポートのタイトル"

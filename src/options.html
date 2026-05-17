@@ -99,14 +99,24 @@
           >
             データをエクスポート
           </button>
-          <button
-            id="import-btn"
-            type="button"
-            class="options__button"
-            data-i18n="options_import"
-          >
-            データをインポート
-          </button>
+          <div class="options__locked-row">
+            <button
+              id="import-btn"
+              type="button"
+              class="options__button"
+              data-i18n="options_import"
+            >
+              データをインポート
+            </button>
+            <span
+              id="import-premium-badge"
+              class="options__premium-badge"
+              data-i18n="options_premium_locked"
+              hidden
+            >
+              プレミアム限定
+            </span>
+          </div>
           <input
             id="import-file"
             type="file"

@@ -133,6 +133,40 @@
     "message": "Premium features are active",
     "description": "オプション: プレミアム有効表示"
   },
+  "options_premium_trial_expired": {
+    "message": "Your free trial has ended. Unlock Premium to access detailed stats and unlimited features.",
+    "description": "オプション: お試し終了時の説明"
+  },
+  "options_premium_locked": {
+    "message": "Premium only",
+    "description": "オプション: プレミアム限定機能バッジ"
+  },
+  "options_premium_locked_hint": {
+    "message": "This is a Premium feature, available during the trial or after unlocking Premium.",
+    "description": "オプション: プレミアム限定機能のヒント"
+  },
+  "popup_trial_banner": {
+    "message": "$DAYS$ days left in free trial",
+    "description": "ポップアップ: 無料お試し残り日数バナー",
+    "placeholders": {
+      "days": {
+        "content": "$1",
+        "example": "5"
+      }
+    }
+  },
+  "popup_trial_expired": {
+    "message": "Free trial has ended",
+    "description": "ポップアップ: お試し終了バナー"
+  },
+  "popup_trial_upgrade": {
+    "message": "Unlock Premium",
+    "description": "ポップアップ: プレミアム解放 CTA"
+  },
+  "popup_premium_active": {
+    "message": "Premium active",
+    "description": "ポップアップ: プレミアム有効バッジ"
+  },
   "report_title": {
     "message": "Monthly report",
     "description": "月次レポートのタイトル"

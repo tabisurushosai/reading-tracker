@@ -83,6 +83,61 @@ body {
   border-radius: var(--radius);
 }
 
+.popup__banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  font-size: 12px;
+  color: var(--fg);
+}
+
+.popup__banner[hidden] {
+  display: none;
+}
+
+.popup__banner--premium {
+  border-color: var(--success);
+  color: var(--success);
+}
+
+.popup__banner-text {
+  flex: 1;
+  font-weight: 500;
+}
+
+.popup__banner-cta {
+  appearance: none;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: var(--accent-fg);
+  border-radius: var(--radius);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 8px;
+  cursor: pointer;
+  min-height: 28px;
+}
+
+.popup__banner-cta:hover:not(:disabled) {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+
+.popup__banner-cta:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.popup__banner-cta[hidden] {
+  display: none;
+}
+
 .popup__label {
   display: block;
   font-size: 12px;

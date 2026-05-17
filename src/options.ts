@@ -10,6 +10,7 @@
  */
 
 import { applyI18n, getLocale, t } from "./i18n.js";
+import { loadPremiumStatus, type PremiumStatus } from "./premium.js";
 
 type ThemePref = "auto" | "light" | "dark";
 type DifficultyPref = "easy" | "medium" | "hard" | "any";
@@ -22,8 +23,6 @@ interface Settings {
 }
 
 const SCHEMA_VERSION = 1;
-const TRIAL_DAYS = 7;
-const DAY_MS = 24 * 60 * 60 * 1000;
 
 const DEFAULT_SETTINGS: Settings = {
   schemaVersion: SCHEMA_VERSION,
@@ -100,30 +99,53 @@ function flashSaved(): void {
   }, 1600);
 }
 
-async function renderPremiumStatus(): Promise<void> {
-  const { trial_start_ts, premium_unlocked } = await chrome.storage.local.get([
-    "trial_start_ts",
-    "premium_unlocked",
-  ]);
-  const status = $<HTMLParagraphElement>("premium-status");
+/**
+ * Render the Premium section + apply gating to feature-locked UI. Uses the
+ * single PremiumStatus view from premium.ts so banner copy and the actual
+ * feature gate cannot disagree.
+ */
+async function renderPremiumStatus(): Promise<PremiumStatus> {
+  const status = await loadPremiumStatus();
+  const statusEl = $<HTMLParagraphElement>("premium-status");
   const unlockBtn = $<HTMLButtonElement>("premium-unlock-btn");
 
-  if (premium_unlocked === true) {
-    status.textContent = t("options_premium_active");
+  if (status.isPremium) {
+    statusEl.textContent = t("options_premium_active");
     unlockBtn.hidden = true;
-    return;
-  }
-
-  const startedAt = typeof trial_start_ts === "number" ? trial_start_ts : Date.now();
-  const elapsed = Date.now() - startedAt;
-  const remaining = Math.max(0, Math.ceil((TRIAL_DAYS * DAY_MS - elapsed) / DAY_MS));
-
-  if (remaining > 0) {
-    status.textContent = t("options_trial_remaining", String(remaining));
+  } else if (status.isTrial) {
+    statusEl.textContent = t(
+      "options_trial_remaining",
+      String(status.trialDaysRemaining),
+    );
     unlockBtn.hidden = false;
   } else {
-    status.textContent = "";
+    statusEl.textContent = t("options_premium_trial_expired");
     unlockBtn.hidden = false;
+  }
+
+  applyPremiumGates(status);
+  return status;
+}
+
+/**
+ * Toggle premium-only UI surfaces based on access. Free tier locks the data
+ * import path (restoring a backup is a power-user / Premium reliability
+ * feature) while keeping export available — SPEC.md's "個人情報外部送信なし"
+ * implies users always own and can copy out their own data.
+ */
+function applyPremiumGates(status: PremiumStatus): void {
+  const importBtn = document.getElementById("import-btn") as HTMLButtonElement | null;
+  const importBadge = document.getElementById("import-premium-badge");
+  if (importBtn) {
+    importBtn.disabled = !status.hasAccess;
+    importBtn.setAttribute(
+      "aria-disabled",
+      status.hasAccess ? "false" : "true",
+    );
+    importBtn.title = status.hasAccess ? "" : t("options_premium_locked_hint");
+  }
+  if (importBadge) {
+    importBadge.hidden = status.hasAccess;
   }
 }
 
@@ -182,7 +204,7 @@ async function init(): Promise<void> {
   let settings = await loadSettings();
   applyTheme(settings.theme);
   renderForm(settings);
-  await renderPremiumStatus();
+  let premium = await renderPremiumStatus();
 
   $<HTMLFormElement>("settings-form").addEventListener("submit", async (ev) => {
     ev.preventDefault();
@@ -199,11 +221,16 @@ async function init(): Promise<void> {
 
   const fileInput = $<HTMLInputElement>("import-file");
   $<HTMLButtonElement>("import-btn").addEventListener("click", () => {
+    if (!premium.hasAccess) {
+      window.alert(t("options_premium_locked_hint"));
+      return;
+    }
     fileInput.click();
   });
   fileInput.addEventListener("change", () => {
     const file = fileInput.files?.[0];
     fileInput.value = "";
+    if (!premium.hasAccess) return;
     if (file) {
       handleImportFile(file).catch((err) => console.error("[options] import failed", err));
     }

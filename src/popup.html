@@ -12,6 +12,25 @@
         <h1 class="popup__title" data-i18n="popup_title">読書記録</h1>
       </header>
 
+      <aside
+        id="premium-banner"
+        class="popup__banner"
+        role="status"
+        aria-live="polite"
+        hidden
+      >
+        <span id="premium-banner-text" class="popup__banner-text"></span>
+        <button
+          id="premium-banner-cta"
+          type="button"
+          class="popup__banner-cta"
+          hidden
+          data-i18n="popup_trial_upgrade"
+        >
+          プレミアムを解放
+        </button>
+      </aside>
+
       <section class="popup__section" aria-labelledby="current-article-label">
         <h2 id="current-article-label" class="popup__label" data-i18n="popup_current_article">
           現在の記事

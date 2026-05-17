@@ -19,6 +19,11 @@ import {
   type ArticleCandidate,
 } from "./article-detect.js";
 import { scoreArticle, type Difficulty } from "./difficulty-score.js";
+import {
+  formatTrialBannerCopy,
+  loadPremiumStatus,
+  type PremiumStatus,
+} from "./premium.js";
 
 interface Settings {
   schemaVersion: number;
@@ -129,6 +134,42 @@ function renderStats(log: DailyLog, settings: Settings): void {
   $<HTMLSpanElement>("daily-goal").textContent = String(settings.dailyGoal);
 }
 
+/**
+ * Render the trial / premium banner. Premium-paid users see a small "Premium
+ * active" badge; trial users see the days-remaining countdown plus an
+ * Unlock-Premium CTA; expired-trial free users see the upgrade CTA only.
+ * The CTA opens the options page where the Stripe Checkout button lives.
+ */
+function renderPremiumBanner(status: PremiumStatus): void {
+  const banner = $<HTMLElement>("premium-banner");
+  const text = $<HTMLSpanElement>("premium-banner-text");
+  const cta = $<HTMLButtonElement>("premium-banner-cta");
+  const copy = formatTrialBannerCopy(status);
+
+  banner.classList.remove("popup__banner--premium");
+
+  if (copy.kind === "premium") {
+    banner.hidden = false;
+    banner.classList.add("popup__banner--premium");
+    text.textContent = t("popup_premium_active");
+    cta.hidden = true;
+    return;
+  }
+
+  if (copy.kind === "trial-active") {
+    banner.hidden = false;
+    text.textContent = t("popup_trial_banner", String(copy.daysRemaining));
+    cta.hidden = false;
+    cta.textContent = t("popup_trial_upgrade");
+    return;
+  }
+
+  banner.hidden = false;
+  text.textContent = t("popup_trial_expired");
+  cta.hidden = false;
+  cta.textContent = t("popup_trial_upgrade");
+}
+
 function flashLogged(): void {
   const msg = $<HTMLParagraphElement>("logged-message");
   msg.hidden = false;
@@ -141,13 +182,15 @@ async function init(): Promise<void> {
   document.documentElement.lang = getLocale().split("-")[0] || "en";
   applyI18n(document);
 
-  const [settings, log, detection] = await Promise.all([
+  const [settings, log, detection, premiumStatus] = await Promise.all([
     loadSettings(),
     loadTodayLog(),
     detectActiveArticle(),
+    loadPremiumStatus(),
   ]);
 
   renderStats(log, settings);
+  renderPremiumBanner(premiumStatus);
   let article = renderArticle(detection.kind === "article" ? detection.article : null);
 
   $<HTMLButtonElement>("log-read-btn").addEventListener("click", async () => {
@@ -173,6 +216,12 @@ async function init(): Promise<void> {
   });
 
   $<HTMLButtonElement>("open-options-btn").addEventListener("click", () => {
+    if (chrome.runtime?.openOptionsPage) {
+      chrome.runtime.openOptionsPage();
+    }
+  });
+
+  $<HTMLButtonElement>("premium-banner-cta").addEventListener("click", () => {
     if (chrome.runtime?.openOptionsPage) {
       chrome.runtime.openOptionsPage();
     }

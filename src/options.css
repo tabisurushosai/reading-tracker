@@ -210,6 +210,32 @@ body {
   color: var(--fg);
 }
 
+.options__locked-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.options__premium-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-fg);
+}
+
+.options__premium-badge[hidden] {
+  display: none;
+}
+
+.options__button:disabled[aria-disabled="true"] {
+  opacity: 0.6;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .options__button {
     transition: none;
