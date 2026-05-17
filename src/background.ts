@@ -25,6 +25,12 @@ interface TrialState {
   premium_unlocked: boolean;
 }
 
+interface StorageUpdate {
+  settings?: Settings;
+  trial_start_ts?: number;
+  premium_unlocked?: boolean;
+}
+
 const SCHEMA_VERSION = 1;
 
 const DEFAULT_SETTINGS: Settings = {
@@ -37,7 +43,7 @@ const DEFAULT_SETTINGS: Settings = {
 async function initializeStorage(reason: chrome.runtime.OnInstalledReason): Promise<void> {
   const stored = await chrome.storage.local.get(["settings", "trial_start_ts", "premium_unlocked"]);
 
-  const next: Partial<Settings & TrialState> = {};
+  const next: StorageUpdate = {};
 
   if (!stored.settings || typeof stored.settings !== "object") {
     next.settings = DEFAULT_SETTINGS;
