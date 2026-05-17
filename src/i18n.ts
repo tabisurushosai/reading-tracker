@@ -37,6 +37,8 @@ export type MessageKey =
   | "options_saved"
   | "options_premium"
   | "options_premium_unlock"
+  | "options_premium_confirm"
+  | "options_premium_unavailable_hint"
   | "options_trial_remaining"
   | "options_premium_active"
   | "options_premium_trial_expired"

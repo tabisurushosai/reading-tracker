@@ -119,6 +119,14 @@
     "message": "Unlock Premium ($3)",
     "description": "オプション: プレミアム購入ボタン"
   },
+  "options_premium_confirm": {
+    "message": "I've completed payment",
+    "description": "オプション: 購入完了確認ボタン"
+  },
+  "options_premium_unavailable_hint": {
+    "message": "Premium purchase is not yet available in this build.",
+    "description": "オプション: Premium URL 未設定時のヒント"
+  },
   "options_trial_remaining": {
     "message": "$DAYS$ days left in free trial",
     "description": "オプション: お試し期間残り",

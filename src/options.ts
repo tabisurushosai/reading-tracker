@@ -11,6 +11,12 @@
 
 import { applyI18n, getLocale, t } from "./i18n.js";
 import { loadPremiumStatus, type PremiumStatus } from "./premium.js";
+import {
+  confirmPurchase,
+  detectCheckoutLocale,
+  isCheckoutUrlAvailable,
+  openCheckoutTab,
+} from "./upgrade.js";
 
 type ThemePref = "auto" | "light" | "dark";
 type DifficultyPref = "easy" | "medium" | "hard" | "any";
@@ -240,9 +246,46 @@ async function init(): Promise<void> {
     handleReset().catch((err) => console.error("[options] reset failed", err));
   });
 
-  $<HTMLButtonElement>("premium-unlock-btn").addEventListener("click", () => {
-    // Stripe Checkout integration is wired up in T033. Stub no-op for now.
-    console.info("[options] premium unlock requested (pending T033)");
+  const unlockBtn = $<HTMLButtonElement>("premium-unlock-btn");
+  let checkoutOpened = false;
+
+  function setUnlockBtnState(mode: "open" | "confirm"): void {
+    if (mode === "open") {
+      unlockBtn.textContent = t("options_premium_unlock");
+    } else {
+      unlockBtn.textContent = t("options_premium_confirm");
+    }
+  }
+
+  if (!isCheckoutUrlAvailable()) {
+    unlockBtn.disabled = true;
+    unlockBtn.title = t("options_premium_unavailable_hint");
+  }
+
+  unlockBtn.addEventListener("click", async () => {
+    if (!checkoutOpened) {
+      if (!isCheckoutUrlAvailable()) return;
+      try {
+        await openCheckoutTab({}, { locale: detectCheckoutLocale() });
+      } catch (err) {
+        console.error("[options] failed to open checkout", err);
+      }
+      checkoutOpened = true;
+      setUnlockBtnState("confirm");
+      return;
+    }
+    unlockBtn.disabled = true;
+    try {
+      premium = await confirmPurchase();
+      premium = await renderPremiumStatus();
+      flashSaved();
+      checkoutOpened = false;
+      setUnlockBtnState("open");
+    } catch (err) {
+      console.error("[options] confirm purchase failed", err);
+    } finally {
+      unlockBtn.disabled = false;
+    }
   });
 }
 

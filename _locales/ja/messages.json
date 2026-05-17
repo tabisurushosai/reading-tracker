@@ -119,6 +119,14 @@
     "message": "プレミアムを解放 ($3)",
     "description": "オプション: プレミアム購入ボタン"
   },
+  "options_premium_confirm": {
+    "message": "支払いを完了しました",
+    "description": "オプション: 購入完了確認ボタン"
+  },
+  "options_premium_unavailable_hint": {
+    "message": "現在このビルドではプレミアム購入はご利用いただけません。",
+    "description": "オプション: Premium URL 未設定時のヒント"
+  },
   "options_trial_remaining": {
     "message": "無料お試し残り $DAYS$ 日",
     "description": "オプション: お試し期間残り",
