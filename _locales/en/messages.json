@@ -4,8 +4,8 @@
     "description": "拡張機能の名前"
   },
   "appDesc": {
-    "message": "Track web article reading with difficulty-based comprehension progress",
-    "description": "拡張機能の説明"
+    "message": "Track web articles by difficulty (easy/medium/hard) with daily goals and monthly reading reports.",
+    "description": "拡張機能の説明 (Chrome Web Store 用、132 文字以内)"
   },
   "popup_title": {
     "message": "Reading Tracker",

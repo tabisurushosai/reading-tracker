@@ -7,11 +7,14 @@
   "scripts": {
     "build": "vite build",
     "lint": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "package": "npm run build && cd dist && zip -r ../release/reading-tracker.zip . && cd .. && zip -ur release/reading-tracker.zip manifest.json _locales icons"
   },
   "devDependencies": {
     "@types/chrome": "^0.0.268",
     "typescript": "^5.4.5",
-    "vite": "^5.2.11"
+    "vite": "^5.2.11",
+    "vitest": "^1.6.0"
   }
 }
