@@ -3,3 +3,5 @@ T101 完了。README.md に英日両対応の機能一覧表 (article-detect / d
 [12:42:44] [reading-tracker phase6 L2] 残14
 T102 完了: `src/background.ts` の `initializeStorage`、`src/popup.ts` と `src/options.ts` の全 helper 関数 (`$`, `loadSettings`, `saveSettings`, `clampGoal`, `applyTheme`, `renderForm`, `readForm`, `handleExport`, `handleImportFile`, `handleReset`, `init` 等)、`src/monthly-report.ts` の `safeDifficultyPref`/`safeDailyGoal`/`countWithPref` に簡潔な JSDoc を追加。`tsc --noEmit` 通過、TODO_PHASE6.md の T102 を [x] に変更、push 済。
 [12:47:08] [reading-tracker phase6 L3] 残13
+T103 完了。`data-i18n-attr="aria-label:<key>"` で popup.html の 4 ボタン (premium-banner-cta / log-read-btn / open-options-btn / view-report-btn) と options.html の 5 ボタン + select 2 つ + daily-goal input + 隠し import-file input に ARIA ラベルを付与。既存の i18n キーを再利用したので新規メッセージ追加なし、main にプッシュ済み。
+[12:50:34] [reading-tracker phase6 L4] 残12

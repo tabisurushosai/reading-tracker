@@ -250,6 +250,22 @@ async function init(): Promise<void> {
       chrome.runtime.openOptionsPage();
     }
   });
+
+  // Keyboard support: focus the primary action so Enter activates it immediately,
+  // and let Escape close the popup as a quick exit.
+  const logBtn = $<HTMLButtonElement>("log-read-btn");
+  if (!logBtn.disabled) {
+    logBtn.focus();
+  } else {
+    $<HTMLButtonElement>("open-options-btn").focus();
+  }
+
+  document.addEventListener("keydown", (ev) => {
+    if (ev.key === "Escape") {
+      ev.preventDefault();
+      window.close();
+    }
+  });
 }
 
 document.addEventListener("DOMContentLoaded", () => {

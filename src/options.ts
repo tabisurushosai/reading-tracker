@@ -295,6 +295,19 @@ async function init(): Promise<void> {
     unlockBtn.title = t("options_premium_unavailable_hint");
   }
 
+  // Keyboard support: focus the first form field so Tab/Enter flow into the
+  // settings form without needing the mouse. Escape blurs the active control
+  // to give a quick way out of an in-progress edit.
+  $<HTMLInputElement>("daily-goal").focus();
+  document.addEventListener("keydown", (ev) => {
+    if (ev.key === "Escape") {
+      const active = document.activeElement;
+      if (active instanceof HTMLElement) {
+        active.blur();
+      }
+    }
+  });
+
   unlockBtn.addEventListener("click", async () => {
     if (!checkoutOpened) {
       if (!isCheckoutUrlAvailable()) return;
