@@ -1,3 +1,5 @@
 [12:41:41] [reading-tracker phase6 L1] 残15
 T101 完了。README.md に英日両対応の機能一覧表 (article-detect / difficulty-score / read-log / goal-tracker / monthly-report / i18n / Premium) と使用手順、開発コマンドを追記してコミット&プッシュ済み。
 [12:42:44] [reading-tracker phase6 L2] 残14
+T102 完了: `src/background.ts` の `initializeStorage`、`src/popup.ts` と `src/options.ts` の全 helper 関数 (`$`, `loadSettings`, `saveSettings`, `clampGoal`, `applyTheme`, `renderForm`, `readForm`, `handleExport`, `handleImportFile`, `handleReset`, `init` 等)、`src/monthly-report.ts` の `safeDifficultyPref`/`safeDailyGoal`/`countWithPref` に簡潔な JSDoc を追加。`tsc --noEmit` 通過、TODO_PHASE6.md の T102 を [x] に変更、push 済。
+[12:47:08] [reading-tracker phase6 L3] 残13

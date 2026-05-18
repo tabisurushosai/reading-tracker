@@ -26,6 +26,7 @@
           class="popup__banner-cta"
           hidden
           data-i18n="popup_trial_upgrade"
+          data-i18n-attr="aria-label:popup_trial_upgrade"
         >
           プレミアムを解放
         </button>
@@ -44,7 +45,13 @@
           <span id="difficulty-value" class="popup__difficulty-value"></span>
         </div>
 
-        <button id="log-read-btn" class="popup__button popup__button--primary" type="button" disabled>
+        <button
+          id="log-read-btn"
+          class="popup__button popup__button--primary"
+          type="button"
+          disabled
+          data-i18n-attr="aria-label:popup_log_read"
+        >
           <span data-i18n="popup_log_read">読了を記録</span>
         </button>
         <p id="logged-message" class="popup__feedback" role="status" hidden data-i18n="popup_logged">
@@ -64,10 +71,22 @@
       </section>
 
       <footer class="popup__footer">
-        <button id="open-options-btn" class="popup__link" type="button" data-i18n="popup_open_options">
+        <button
+          id="open-options-btn"
+          class="popup__link"
+          type="button"
+          data-i18n="popup_open_options"
+          data-i18n-attr="aria-label:popup_open_options"
+        >
           設定を開く
         </button>
-        <button id="view-report-btn" class="popup__link" type="button" data-i18n="popup_view_report">
+        <button
+          id="view-report-btn"
+          class="popup__link"
+          type="button"
+          data-i18n="popup_view_report"
+          data-i18n-attr="aria-label:popup_view_report"
+        >
           月次レポートを見る
         </button>
       </footer>
