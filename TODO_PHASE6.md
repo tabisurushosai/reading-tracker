@@ -13,7 +13,7 @@
 - [x] T108: chrome.alarms / chrome.tabs 等の API 呼び出しに try-catch 追加
 - [x] T109: manifest.json の description を _locales 経由で多言語化
 - [x] T110: tests/ ディレクトリに最低 10 個の単体テスト追加 (vitest)
-- [ ] T111: docs/ARCHITECTURE.md にコンポーネント図 Mermaid 追加
+- [x] T111: docs/ARCHITECTURE.md にコンポーネント図 Mermaid 追加
 - [ ] T112: GitHub Actions workflow (lint + build + test) を .github/workflows/ci.yml に
 - [ ] T113: CHANGELOG.md (Keep a Changelog 準拠) 作成
 - [ ] T114: src/ から console.log/debug を全削除 (本番ビルド)
