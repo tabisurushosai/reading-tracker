@@ -99,6 +99,18 @@
     "message": "Import data",
     "description": "オプション: データインポートボタン"
   },
+  "options_import_invalid_json": {
+    "message": "The file is not valid JSON.",
+    "description": "オプション: インポート時の JSON 解析エラー"
+  },
+  "options_import_invalid_format": {
+    "message": "The backup file format is not recognized.",
+    "description": "オプション: インポート時のフォーマット不正"
+  },
+  "options_import_schema_mismatch": {
+    "message": "The backup schema version does not match this build.",
+    "description": "オプション: インポート時のスキーマバージョン不一致"
+  },
   "options_reset": {
     "message": "Delete all data",
     "description": "オプション: データリセットボタン"

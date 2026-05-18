@@ -7,3 +7,11 @@ T103 完了。`data-i18n-attr="aria-label:<key>"` で popup.html の 4 ボタン
 [12:50:34] [reading-tracker phase6 L4] 残12
 T104 完了。popup/options に auto-focus と Escape キーハンドラを追加し、Tab navigation の初期位置と Enter/Escape キー操作を完全対応。tsc lint パス、commit & push 済 (b881dca)。
 [12:52:41] [reading-tracker phase6 L5] 残11
+T105 完了。popup.css と options.css に以下を追加:
+
+- ダークモードの `--fg-muted` / `--border` / `--disabled-fg` を高コントラスト方向に微調整
+- `@media (prefers-contrast: more)` でライト側の高コントラスト override
+- `@media (prefers-color-scheme: dark) and (prefers-contrast: more)` でダーク+高コントラスト override
+
+push 完了 (b881dca → 9234003)。
+[12:54:08] [reading-tracker phase6 L6] 残10

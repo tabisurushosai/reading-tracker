@@ -3,20 +3,33 @@
  *
  * Lets the user view and edit settings persisted in chrome.storage.local
  * (daily goal, target difficulty, theme), shows Premium/trial status, and
- * exposes basic data-management actions (export/import/reset).
- *
- * Premium gating (T031–T033) will harden the export/import paths later.
- * For now they perform plain JSON dump / restore so the UI is functional.
+ * exposes data-management actions (export/import/reset). Export wraps the
+ * storage snapshot in a versioned envelope so import can reject foreign or
+ * stale backups before they corrupt the user's data.
  */
 
 import { applyI18n, getLocale, t } from "./i18n.js";
 import { loadPremiumStatus, type PremiumStatus } from "./premium.js";
+import {
+  exportAll,
+  importAll,
+  SCHEMA_VERSION as STORAGE_SCHEMA_VERSION,
+} from "./storage.js";
 import {
   confirmPurchase,
   detectCheckoutLocale,
   isCheckoutUrlAvailable,
   openCheckoutTab,
 } from "./upgrade.js";
+
+const BACKUP_KIND = "reading-tracker-backup";
+
+interface BackupEnvelope {
+  kind: typeof BACKUP_KIND;
+  schemaVersion: number;
+  exportedAt: string;
+  payload: Record<string, unknown>;
+}
 
 type ThemePref = "auto" | "light" | "dark";
 type DifficultyPref = "easy" | "medium" | "hard" | "any";
@@ -186,17 +199,38 @@ function downloadJson(filename: string, data: unknown): void {
   window.setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
-/** Export the full chrome.storage.local snapshot as a date-stamped JSON download. */
+/**
+ * Export the full chrome.storage.local snapshot wrapped in a versioned
+ * envelope. The envelope lets import distinguish a real backup from an
+ * arbitrary JSON object and reject incompatible schema versions early.
+ */
 async function handleExport(): Promise<void> {
-  const all = await chrome.storage.local.get(null);
+  const payload = await exportAll();
+  const envelope: BackupEnvelope = {
+    kind: BACKUP_KIND,
+    schemaVersion: STORAGE_SCHEMA_VERSION,
+    exportedAt: new Date().toISOString(),
+    payload,
+  };
   const filename = `reading-tracker-backup-${new Date().toISOString().slice(0, 10)}.json`;
-  downloadJson(filename, all);
+  downloadJson(filename, envelope);
+}
+
+/** Narrow an unknown parsed-JSON value into a BackupEnvelope, or null if invalid. */
+function parseBackupEnvelope(parsed: unknown): BackupEnvelope | null {
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+  const e = parsed as Partial<BackupEnvelope>;
+  if (e.kind !== BACKUP_KIND) return null;
+  if (typeof e.schemaVersion !== "number") return null;
+  if (typeof e.exportedAt !== "string") return null;
+  if (!e.payload || typeof e.payload !== "object" || Array.isArray(e.payload)) return null;
+  return e as BackupEnvelope;
 }
 
 /**
- * Restore a previously exported backup. Rejects non-JSON / non-object payloads
- * with an alert and reloads the page on success so every surface re-reads
- * storage from a clean state.
+ * Restore a previously exported backup. Validates the envelope, rejects
+ * payloads with a mismatched schemaVersion, and reloads the page on success
+ * so every surface re-reads storage from a clean state.
  */
 async function handleImportFile(file: File): Promise<void> {
   const text = await file.text();
@@ -204,14 +238,19 @@ async function handleImportFile(file: File): Promise<void> {
   try {
     parsed = JSON.parse(text);
   } catch {
-    window.alert("Invalid JSON file.");
+    window.alert(t("options_import_invalid_json"));
     return;
   }
-  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-    window.alert("Invalid backup format.");
+  const envelope = parseBackupEnvelope(parsed);
+  if (!envelope) {
+    window.alert(t("options_import_invalid_format"));
     return;
   }
-  await chrome.storage.local.set(parsed as Record<string, unknown>);
+  if (envelope.schemaVersion !== STORAGE_SCHEMA_VERSION) {
+    window.alert(t("options_import_schema_mismatch"));
+    return;
+  }
+  await importAll(envelope.payload);
   window.location.reload();
 }
 
