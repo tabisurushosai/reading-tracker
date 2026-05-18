@@ -23,7 +23,6 @@ export type MessageKey =
   | "popup_open_options"
   | "popup_view_report"
   | "options_title"
-  | "options_language"
   | "options_daily_goal"
   | "options_difficulty_pref"
   | "options_theme"
@@ -51,13 +50,7 @@ export type MessageKey =
   | "popup_trial_expired"
   | "popup_trial_upgrade"
   | "popup_premium_active"
-  | "report_title"
-  | "report_total_articles"
-  | "report_by_difficulty"
-  | "report_streak"
-  | "common_save"
-  | "common_cancel"
-  | "common_close";
+  | "common_save";
 
 /**
  * Resolve a localized message. Falls back to the raw key when running outside

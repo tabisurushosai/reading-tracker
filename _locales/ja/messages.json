@@ -63,10 +63,6 @@
     "message": "設定",
     "description": "オプションページのタイトル"
   },
-  "options_language": {
-    "message": "言語",
-    "description": "オプション: 言語設定"
-  },
   "options_daily_goal": {
     "message": "1日の目標記事数",
     "description": "オプション: 1日の目標"
@@ -187,32 +183,8 @@
     "message": "プレミアム有効",
     "description": "ポップアップ: プレミアム有効バッジ"
   },
-  "report_title": {
-    "message": "月次レポート",
-    "description": "月次レポートのタイトル"
-  },
-  "report_total_articles": {
-    "message": "今月の読了記事数",
-    "description": "レポート: 月間総読了数"
-  },
-  "report_by_difficulty": {
-    "message": "難易度別内訳",
-    "description": "レポート: 難易度別グラフ"
-  },
-  "report_streak": {
-    "message": "連続読書日数",
-    "description": "レポート: 連続日数"
-  },
   "common_save": {
     "message": "保存",
     "description": "汎用: 保存"
-  },
-  "common_cancel": {
-    "message": "キャンセル",
-    "description": "汎用: キャンセル"
-  },
-  "common_close": {
-    "message": "閉じる",
-    "description": "汎用: 閉じる"
   }
 }
