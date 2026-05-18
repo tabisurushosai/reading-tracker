@@ -59,7 +59,14 @@ function $<T extends HTMLElement>(id: string): T {
 
 /** Load user settings, merging stored values over defaults to survive partial records. */
 async function loadSettings(): Promise<Settings> {
-  const { settings } = await chrome.storage.local.get("settings");
+  let stored: { settings?: unknown };
+  try {
+    stored = await chrome.storage.local.get("settings");
+  } catch (err) {
+    console.error("[options] loadSettings failed", err);
+    return DEFAULT_SETTINGS;
+  }
+  const settings = stored.settings;
   if (settings && typeof settings === "object") {
     return { ...DEFAULT_SETTINGS, ...(settings as Partial<Settings>) };
   }

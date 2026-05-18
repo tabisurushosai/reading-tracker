@@ -46,7 +46,13 @@ const DEFAULT_SETTINGS: Settings = {
  * are logged so the service worker can return quickly.
  */
 async function initializeStorage(reason: chrome.runtime.OnInstalledReason): Promise<void> {
-  const stored = await chrome.storage.local.get(["settings", "trial_start_ts", "premium_unlocked"]);
+  let stored: Record<string, unknown>;
+  try {
+    stored = await chrome.storage.local.get(["settings", "trial_start_ts", "premium_unlocked"]);
+  } catch (err) {
+    console.error("[reading-tracker] storage read failed", err);
+    return;
+  }
 
   const next: StorageUpdate = {};
 
@@ -65,7 +71,12 @@ async function initializeStorage(reason: chrome.runtime.OnInstalledReason): Prom
   }
 
   if (Object.keys(next).length > 0) {
-    await chrome.storage.local.set(next);
+    try {
+      await chrome.storage.local.set(next);
+    } catch (err) {
+      console.error("[reading-tracker] storage write failed", err);
+      return;
+    }
   }
 
   console.info(`[reading-tracker] storage initialized (${reason})`);
