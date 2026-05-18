@@ -5,3 +5,5 @@ T102 完了: `src/background.ts` の `initializeStorage`、`src/popup.ts` と `s
 [12:47:08] [reading-tracker phase6 L3] 残13
 T103 完了。`data-i18n-attr="aria-label:<key>"` で popup.html の 4 ボタン (premium-banner-cta / log-read-btn / open-options-btn / view-report-btn) と options.html の 5 ボタン + select 2 つ + daily-goal input + 隠し import-file input に ARIA ラベルを付与。既存の i18n キーを再利用したので新規メッセージ追加なし、main にプッシュ済み。
 [12:50:34] [reading-tracker phase6 L4] 残12
+T104 完了。popup/options に auto-focus と Escape キーハンドラを追加し、Tab navigation の初期位置と Enter/Escape キー操作を完全対応。tsc lint パス、commit & push 済 (b881dca)。
+[12:52:41] [reading-tracker phase6 L5] 残11
