@@ -14,7 +14,7 @@
 - [x] T109: manifest.json の description を _locales 経由で多言語化
 - [x] T110: tests/ ディレクトリに最低 10 個の単体テスト追加 (vitest)
 - [x] T111: docs/ARCHITECTURE.md にコンポーネント図 Mermaid 追加
-- [ ] T112: GitHub Actions workflow (lint + build + test) を .github/workflows/ci.yml に
+- [x] T112: GitHub Actions workflow (lint + build + test) を .github/workflows/ci.yml に
 - [ ] T113: CHANGELOG.md (Keep a Changelog 準拠) 作成
 - [ ] T114: src/ から console.log/debug を全削除 (本番ビルド)
 - [ ] T115: dist/ 生成サイズの最適化 (vite config の minify 最適化)
