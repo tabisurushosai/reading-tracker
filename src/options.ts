@@ -287,7 +287,12 @@ async function init(): Promise<void> {
   $<HTMLFormElement>("settings-form").addEventListener("submit", async (ev) => {
     ev.preventDefault();
     settings = readForm(settings);
-    await saveSettings(settings);
+    try {
+      await saveSettings(settings);
+    } catch (err) {
+      console.error("[options] saveSettings failed", err);
+      return;
+    }
     applyTheme(settings.theme);
     renderForm(settings);
     flashSaved();

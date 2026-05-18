@@ -68,7 +68,13 @@ function $<T extends HTMLElement>(id: string): T {
 
 /** Read user settings, merging stored values over defaults to survive partial records. */
 async function loadSettings(): Promise<Settings> {
-  const { settings } = await chrome.storage.local.get("settings");
+  let stored: { settings?: unknown };
+  try {
+    stored = await chrome.storage.local.get("settings");
+  } catch {
+    return DEFAULT_SETTINGS;
+  }
+  const settings = stored.settings;
   if (settings && typeof settings === "object") {
     return { ...DEFAULT_SETTINGS, ...(settings as Partial<Settings>) };
   }
@@ -78,8 +84,13 @@ async function loadSettings(): Promise<Settings> {
 /** Load today's read log from chrome.storage.local. Returns an empty log on first run. */
 async function loadTodayLog(): Promise<DailyLog> {
   const key = todayKey();
-  const stored = await chrome.storage.local.get(key);
-  const log = stored[key];
+  let stored: Record<string, unknown>;
+  try {
+    stored = await chrome.storage.local.get(key);
+  } catch {
+    return { count: 0, entries: [] };
+  }
+  const log = stored[key] as Partial<DailyLog> | undefined;
   if (log && typeof log === "object" && typeof log.count === "number") {
     return { count: log.count, entries: Array.isArray(log.entries) ? log.entries : [] };
   }
@@ -191,6 +202,26 @@ function flashLogged(): void {
 }
 
 /**
+ * Open the options page via chrome.runtime, swallowing any platform error so
+ * a click never throws into the popup. chrome.runtime.openOptionsPage rejects
+ * (or, on some channels, throws synchronously) when the worker is unreachable
+ * or the page is mid-reload; we treat that as a no-op rather than a crash.
+ */
+function safeOpenOptionsPage(): void {
+  if (!chrome.runtime?.openOptionsPage) return;
+  try {
+    const result = chrome.runtime.openOptionsPage();
+    if (result && typeof (result as Promise<void>).catch === "function") {
+      (result as Promise<void>).catch((err) => {
+        console.error("[popup] openOptionsPage failed", err);
+      });
+    }
+  } catch (err) {
+    console.error("[popup] openOptionsPage threw", err);
+  }
+}
+
+/**
  * Popup boot sequence: apply localization, load state in parallel, render each
  * surface, then wire button click handlers. Runs once per popup open.
  */
@@ -232,23 +263,17 @@ async function init(): Promise<void> {
   });
 
   $<HTMLButtonElement>("open-options-btn").addEventListener("click", () => {
-    if (chrome.runtime?.openOptionsPage) {
-      chrome.runtime.openOptionsPage();
-    }
+    safeOpenOptionsPage();
   });
 
   $<HTMLButtonElement>("premium-banner-cta").addEventListener("click", () => {
-    if (chrome.runtime?.openOptionsPage) {
-      chrome.runtime.openOptionsPage();
-    }
+    safeOpenOptionsPage();
   });
 
   $<HTMLButtonElement>("view-report-btn").addEventListener("click", () => {
     // Monthly report page is not yet implemented (T028–T030).
     // Fall back to opening the options page so the click is never a dead-end.
-    if (chrome.runtime?.openOptionsPage) {
-      chrome.runtime.openOptionsPage();
-    }
+    safeOpenOptionsPage();
   });
 
   // Keyboard support: focus the primary action so Enter activates it immediately,
