@@ -51,6 +51,7 @@ const DEFAULT_SETTINGS: Settings = {
   theme: "auto",
 };
 
+/** Format the chrome.storage key for `date`'s daily log (`daily_log_YYYY-MM-DD`). */
 function todayKey(date = new Date()): string {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, "0");
@@ -58,12 +59,14 @@ function todayKey(date = new Date()): string {
   return `daily_log_${y}-${m}-${d}`;
 }
 
+/** Strongly-typed `getElementById`. Throws if the popup template is missing the id. */
 function $<T extends HTMLElement>(id: string): T {
   const el = document.getElementById(id);
   if (!el) throw new Error(`[popup] missing element #${id}`);
   return el as T;
 }
 
+/** Read user settings, merging stored values over defaults to survive partial records. */
 async function loadSettings(): Promise<Settings> {
   const { settings } = await chrome.storage.local.get("settings");
   if (settings && typeof settings === "object") {
@@ -72,6 +75,7 @@ async function loadSettings(): Promise<Settings> {
   return DEFAULT_SETTINGS;
 }
 
+/** Load today's read log from chrome.storage.local. Returns an empty log on first run. */
 async function loadTodayLog(): Promise<DailyLog> {
   const key = todayKey();
   const stored = await chrome.storage.local.get(key);
@@ -82,6 +86,7 @@ async function loadTodayLog(): Promise<DailyLog> {
   return { count: 0, entries: [] };
 }
 
+/** Append `entry` to today's log and persist the updated DailyLog. */
 async function appendTodayLog(entry: DailyLogEntry): Promise<DailyLog> {
   const key = todayKey();
   const current = await loadTodayLog();
@@ -114,6 +119,11 @@ async function scoreActiveTab(): Promise<Difficulty | undefined> {
   }
 }
 
+/**
+ * Paint the "current article" line and toggle the Log Read button. Returns the
+ * article unchanged so callers can keep a single reference around for the
+ * click handler.
+ */
 function renderArticle(article: ArticleCandidate | null): ArticleCandidate | null {
   const titleEl = $<HTMLParagraphElement>("current-article-title");
   const logBtn = $<HTMLButtonElement>("log-read-btn");
@@ -129,6 +139,7 @@ function renderArticle(article: ArticleCandidate | null): ArticleCandidate | nul
   return article;
 }
 
+/** Paint today's count / daily-goal pair shown below the article line. */
 function renderStats(log: DailyLog, settings: Settings): void {
   $<HTMLSpanElement>("today-count").textContent = String(log.count);
   $<HTMLSpanElement>("daily-goal").textContent = String(settings.dailyGoal);
@@ -170,6 +181,7 @@ function renderPremiumBanner(status: PremiumStatus): void {
   cta.textContent = t("popup_trial_upgrade");
 }
 
+/** Briefly show the "logged!" toast after a successful read append. */
 function flashLogged(): void {
   const msg = $<HTMLParagraphElement>("logged-message");
   msg.hidden = false;
@@ -178,6 +190,10 @@ function flashLogged(): void {
   }, 1600);
 }
 
+/**
+ * Popup boot sequence: apply localization, load state in parallel, render each
+ * surface, then wire button click handlers. Runs once per popup open.
+ */
 async function init(): Promise<void> {
   document.documentElement.lang = getLocale().split("-")[0] || "en";
   applyI18n(document);

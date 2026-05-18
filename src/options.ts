@@ -37,12 +37,14 @@ const DEFAULT_SETTINGS: Settings = {
   theme: "auto",
 };
 
+/** Strongly-typed `getElementById`. Throws if the options template is missing the id. */
 function $<T extends HTMLElement>(id: string): T {
   const el = document.getElementById(id);
   if (!el) throw new Error(`[options] missing element #${id}`);
   return el as T;
 }
 
+/** Load user settings, merging stored values over defaults to survive partial records. */
 async function loadSettings(): Promise<Settings> {
   const { settings } = await chrome.storage.local.get("settings");
   if (settings && typeof settings === "object") {
@@ -51,23 +53,31 @@ async function loadSettings(): Promise<Settings> {
   return DEFAULT_SETTINGS;
 }
 
+/** Persist the given settings object verbatim to chrome.storage.local. */
 async function saveSettings(next: Settings): Promise<void> {
   await chrome.storage.local.set({ settings: next });
 }
 
+/** Clamp a daily-goal input into the supported [1, 100] integer range. */
 function clampGoal(raw: number): number {
   if (!Number.isFinite(raw)) return DEFAULT_SETTINGS.dailyGoal;
   return Math.min(100, Math.max(1, Math.floor(raw)));
 }
 
+/** Narrow a `<select>` value to the DifficultyPref union. */
 function isDifficultyPref(v: string): v is DifficultyPref {
   return v === "easy" || v === "medium" || v === "hard" || v === "any";
 }
 
+/** Narrow a `<select>` value to the ThemePref union. */
 function isThemePref(v: string): v is ThemePref {
   return v === "auto" || v === "light" || v === "dark";
 }
 
+/**
+ * Apply the theme preference to the document root so the CSS variables pick
+ * the correct palette. "auto" defers to the OS color-scheme media query.
+ */
 function applyTheme(theme: ThemePref): void {
   const root = document.documentElement;
   if (theme === "auto") {
@@ -79,12 +89,18 @@ function applyTheme(theme: ThemePref): void {
   }
 }
 
+/** Reflect the given Settings into the form inputs. */
 function renderForm(settings: Settings): void {
   $<HTMLInputElement>("daily-goal").value = String(settings.dailyGoal);
   $<HTMLSelectElement>("difficulty-pref").value = settings.difficultyPref;
   $<HTMLSelectElement>("theme").value = settings.theme;
 }
 
+/**
+ * Read current form values, validating and clamping them. Falls back to the
+ * previous Settings field when the input is out of range so partial edits
+ * never corrupt storage.
+ */
 function readForm(prev: Settings): Settings {
   const goalRaw = Number($<HTMLInputElement>("daily-goal").value);
   const diff = $<HTMLSelectElement>("difficulty-pref").value;
@@ -97,6 +113,7 @@ function readForm(prev: Settings): Settings {
   };
 }
 
+/** Briefly show the "saved" toast after settings persist successfully. */
 function flashSaved(): void {
   const msg = $<HTMLElement>("saved-message");
   msg.hidden = false;
@@ -155,6 +172,7 @@ function applyPremiumGates(status: PremiumStatus): void {
   }
 }
 
+/** Trigger a browser download for `data` as pretty-printed JSON. */
 function downloadJson(filename: string, data: unknown): void {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
@@ -168,12 +186,18 @@ function downloadJson(filename: string, data: unknown): void {
   window.setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
+/** Export the full chrome.storage.local snapshot as a date-stamped JSON download. */
 async function handleExport(): Promise<void> {
   const all = await chrome.storage.local.get(null);
   const filename = `reading-tracker-backup-${new Date().toISOString().slice(0, 10)}.json`;
   downloadJson(filename, all);
 }
 
+/**
+ * Restore a previously exported backup. Rejects non-JSON / non-object payloads
+ * with an alert and reloads the page on success so every surface re-reads
+ * storage from a clean state.
+ */
 async function handleImportFile(file: File): Promise<void> {
   const text = await file.text();
   let parsed: unknown;
@@ -191,6 +215,10 @@ async function handleImportFile(file: File): Promise<void> {
   window.location.reload();
 }
 
+/**
+ * Wipe chrome.storage.local after explicit user confirmation, then re-seed
+ * defaults so the next popup open does not crash on missing keys.
+ */
 async function handleReset(): Promise<void> {
   if (!window.confirm(t("options_reset_confirm"))) return;
   await chrome.storage.local.clear();
@@ -203,6 +231,11 @@ async function handleReset(): Promise<void> {
   window.location.reload();
 }
 
+/**
+ * Options page boot sequence: localize, hydrate the form, render Premium
+ * status, then wire up form submit, export/import/reset, and the Premium
+ * unlock button. Runs once per options page open.
+ */
 async function init(): Promise<void> {
   document.documentElement.lang = getLocale().split("-")[0] || "en";
   applyI18n(document);

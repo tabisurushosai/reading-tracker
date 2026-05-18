@@ -322,6 +322,7 @@ export const FREE_TIER_TOP_HOSTS = 3;
 // Pure helpers — T029 implements, T030 tests
 // ---------------------------------------------------------------------------
 
+/** Read settings.difficultyPref defensively; falls back to "any" on a bad record. */
 function safeDifficultyPref(settings: Settings | undefined | null): Settings["difficultyPref"] {
   const pref = settings?.difficultyPref;
   return pref === "easy" || pref === "medium" || pref === "hard" || pref === "any"
@@ -329,11 +330,13 @@ function safeDifficultyPref(settings: Settings | undefined | null): Settings["di
     : "any";
 }
 
+/** Read settings.dailyGoal defensively; clamps non-positive / non-numeric to 1. */
 function safeDailyGoal(settings: Settings | undefined | null): number {
   const g = settings?.dailyGoal;
   return typeof g === "number" && g > 0 ? g : 1;
 }
 
+/** Count entries in `log` filtered by `pref` ("any" returns the total). */
 function countWithPref(log: DailyLog | undefined, pref: Settings["difficultyPref"]): number {
   if (!log) return 0;
   if (pref === "any") return log.count ?? 0;

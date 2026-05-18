@@ -40,6 +40,11 @@ const DEFAULT_SETTINGS: Settings = {
   theme: "auto",
 };
 
+/**
+ * Seed chrome.storage.local with defaults the first time we see it, and
+ * top up any missing keys on subsequent wakes. Never throws — write errors
+ * are logged so the service worker can return quickly.
+ */
 async function initializeStorage(reason: chrome.runtime.OnInstalledReason): Promise<void> {
   const stored = await chrome.storage.local.get(["settings", "trial_start_ts", "premium_unlocked"]);
 
