@@ -55,8 +55,8 @@ npm run build       # dist/ をビルド / build to dist/
 npm run package     # release/reading-tracker.zip 生成 / build the release zip
 ```
 
-詳細仕様は `SPEC.md`、進捗管理は `TODO.md` / `TODO_PHASE6.md` を参照。
-See `SPEC.md` for full spec; `TODO.md` and `TODO_PHASE6.md` for task status.
+詳細仕様は `SPEC.md`、進捗管理は `TODO.md` を参照。
+See `SPEC.md` for full spec; `TODO.md` for task status.
 
 ---
 
