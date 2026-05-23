@@ -25,7 +25,7 @@
 - **外部 API 呼び出し**: 課金処理 (Stripe Checkout) を除き、本拡張機能から外部サーバーへの通信は発生しません。Stripe Checkout 利用時のみ、ユーザーが明示的にアップグレード操作を行った場合に Stripe のページへ遷移します。Stripe におけるデータ取り扱いは Stripe のプライバシーポリシーに従います。
 
 ### 子供のプライバシー
-本拡張機能は不登校児・発達特性児を含む子供のユーザーが利用することを想定しています。広告、外部リンク誘導、データ収集は一切行わず、子供の安全に最大限配慮しています。
+本拡張機能は不登校児・発達特性児を含む子供のユーザーが利用することを想定しています。広告、トラッキング目的の外部リンク誘導、データ収集は一切行わず、Premium アップグレード時のみユーザーの明示操作で Stripe Checkout へ遷移します。
 
 ### データの削除
 ユーザーは Chrome の拡張機能管理画面から本拡張機能を削除することで、保存されたすべてのデータを完全に削除できます。
@@ -59,7 +59,7 @@ All such data is **stored only within your browser** and is never transmitted to
 - **External API calls**: Except for payment processing (Stripe Checkout), the Extension does not communicate with any external server. Only when the user explicitly initiates an upgrade, the user is redirected to Stripe Checkout. Data handling at Stripe follows Stripe's own privacy policy.
 
 ### Children's Privacy
-The Extension is intended for children including those who do not attend school regularly and those with developmental differences. No advertisements, no external link promotions, and no data collection are conducted, with utmost consideration for child safety.
+The Extension is intended for children including those who do not attend school regularly and those with developmental differences. No advertisements, tracking-oriented external link promotions, or data collection are conducted; only a user-initiated Premium upgrade opens Stripe Checkout.
 
 ### Data Deletion
 Users can completely delete all stored data by uninstalling the Extension from Chrome's extension management page.
